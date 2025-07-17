@@ -1,3 +1,5 @@
+//  SnippetsListView.swift
+
 import SwiftUI
 
 // MARK: - Snippets List View

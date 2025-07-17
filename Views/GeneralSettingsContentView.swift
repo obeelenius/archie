@@ -1,10 +1,4 @@
-//
 //  GeneralSettingsContentView.swift
-//  Archie
-//
-//  Created by Amy Elenius on 17/7/2025.
-//
-
 
 import SwiftUI
 

@@ -1,3 +1,5 @@
+//  SettingsView.swift
+
 import SwiftUI
 
 // Extension to add cursor support
