@@ -6,11 +6,15 @@ struct ArchieApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        Settings {
+        WindowGroup("Archie Settings") {
             SettingsView()
+                .frame(minWidth: 900, minHeight: 600)
         }
+        .windowStyle(.automatic)
         .windowResizability(.contentSize)
-        .defaultSize(width: 900, height: 600)
+        .commands {
+            CommandGroup(replacing: .newItem) { }
+        }
     }
 }
 
@@ -89,38 +93,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func openSettingsWindow() {
-        print("Attempting to open settings window") // Debug output
-        
-        // First try to find and bring existing settings window to front
+        // Look for existing settings window
         for window in NSApp.windows {
-            print("Found window: \(window.title)") // Debug output
-            if window.title.contains("Settings") || window.title.contains("Preferences") || window.title.contains("Archie") {
-                print("Bringing existing window to front")
+            if window.title.contains("Archie Settings") {
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
                 return
             }
         }
         
-        print("No existing window found, creating new one")
-        
-        // Use keyboard shortcut approach that works reliably
-        let event = NSEvent.keyEvent(with: .keyDown,
-                                   location: NSPoint.zero,
-                                   modifierFlags: .command,
-                                   timestamp: 0,
-                                   windowNumber: 0,
-                                   context: nil,
-                                   characters: ",",
-                                   charactersIgnoringModifiers: ",",
-                                   isARepeat: false,
-                                   keyCode: 43)
-        
-        if let event = event {
-            NSApp.sendEvent(event)
+        // If no window found, create new one by opening a new window
+        if (NSApp.windows.first?.windowController) != nil {
+            // Try to open new window
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            // Fallback: activate app which should show the window
+            NSApp.activate(ignoringOtherApps: true)
         }
-        
-        NSApp.activate(ignoringOtherApps: true)
     }
     
     private func setupEventMonitoring() {

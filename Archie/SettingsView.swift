@@ -21,7 +21,6 @@ struct SettingsView: View {
                     Text("General")
                 }
         }
-        .frame(minWidth: 900, minHeight: 600)
     }
 }
 
