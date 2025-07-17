@@ -189,94 +189,85 @@ struct AddSnippetSlideOut: View {
                             .foregroundColor(.secondary)
                         
                         // Variables section at the bottom of expansion
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 6) {
                                 Image(systemName: "curlybraces")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.purple)
                                 Text("Variables")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(.primary)
                                 Spacer()
                                 Text("Click to insert")
-                                    .font(.system(size: 9))
+                                    .font(.system(size: 8))
                                     .foregroundColor(.secondary)
                             }
                             
-                            VStack(spacing: 8) {
-                                // Date Variables
-                                Text("Dates")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.purple)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Date group
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Dates")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    
+                                    AddFlowLayout(spacing: 4) {
+                                        AddVariableButton(variable: "{{date}}", description: "Current date", example: "Jan 15, 2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-short}}", description: "YYYY-MM-DD", example: "2025-01-15", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-long}}", description: "Full date", example: "Wednesday, January 15, 2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-us}}", description: "US format", example: "01/15/2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-uk}}", description: "UK format", example: "15/01/2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-iso}}", description: "ISO format", example: "2025-01-15T14:30:00Z", expansion: $expansion)
+                                    }
+                                }
                                 
-                                VariableButton(variable: "{{date}}", description: "Default date format", example: "Jan 15, 2025", expansion: $expansion)
-                                VariableButton(variable: "{{date-short}}", description: "Short numeric date", example: "2025-01-15", expansion: $expansion)
-                                VariableButton(variable: "{{date-long}}", description: "Full written date", example: "Wednesday, January 15, 2025", expansion: $expansion)
-                                VariableButton(variable: "{{date-iso}}", description: "ISO 8601 format", example: "2025-01-15T14:30:00Z", expansion: $expansion)
-                                VariableButton(variable: "{{date-us}}", description: "US format", example: "01/15/2025", expansion: $expansion)
-                                VariableButton(variable: "{{date-uk}}", description: "UK format", example: "15/01/2025", expansion: $expansion)
-                                VariableButton(variable: "{{date-compact}}", description: "Compact format", example: "20250115", expansion: $expansion)
+                                // Time group
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Times")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    
+                                    AddFlowLayout(spacing: 4) {
+                                        AddVariableButton(variable: "{{time}}", description: "Current time", example: "2:30 PM", expansion: $expansion)
+                                        AddVariableButton(variable: "{{time-24}}", description: "24-hour time", example: "14:30", expansion: $expansion)
+                                        AddVariableButton(variable: "{{time-12}}", description: "12-hour + AM/PM", example: "2:30 PM", expansion: $expansion)
+                                        AddVariableButton(variable: "{{time-seconds}}", description: "Time + seconds", example: "2:30:45 PM", expansion: $expansion)
+                                        AddVariableButton(variable: "{{hour}}", description: "Hour", example: "2", expansion: $expansion)
+                                        AddVariableButton(variable: "{{minute}}", description: "Minutes", example: "30", expansion: $expansion)
+                                    }
+                                }
                                 
-                                // Day/Month/Year Components
-                                Text("Date Components")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.purple)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
+                                // Relative dates group
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Relative")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    
+                                    AddFlowLayout(spacing: 4) {
+                                        AddVariableButton(variable: "{{date-1}}", description: "Yesterday", example: "Jan 14, 2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date+1}}", description: "Tomorrow", example: "Jan 16, 2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date-7}}", description: "Week ago", example: "Jan 8, 2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{date+7}}", description: "Week from now", example: "Jan 22, 2025", expansion: $expansion)
+                                    }
+                                }
                                 
-                                VariableButton(variable: "{{day}}", description: "Day number", example: "15", expansion: $expansion)
-                                VariableButton(variable: "{{day-name}}", description: "Day name", example: "Wednesday", expansion: $expansion)
-                                VariableButton(variable: "{{day-short}}", description: "Short day name", example: "Wed", expansion: $expansion)
-                                VariableButton(variable: "{{month}}", description: "Month number", example: "1", expansion: $expansion)
-                                VariableButton(variable: "{{month-name}}", description: "Month name", example: "January", expansion: $expansion)
-                                VariableButton(variable: "{{month-short}}", description: "Short month name", example: "Jan", expansion: $expansion)
-                                VariableButton(variable: "{{year}}", description: "Full year", example: "2025", expansion: $expansion)
-                                VariableButton(variable: "{{year-short}}", description: "Short year", example: "25", expansion: $expansion)
-                                
-                                // Time Variables
-                                Text("Times")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.purple)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
-                                
-                                VariableButton(variable: "{{time}}", description: "Default time format", example: "2:30 PM", expansion: $expansion)
-                                VariableButton(variable: "{{time-24}}", description: "24-hour format", example: "14:30", expansion: $expansion)
-                                VariableButton(variable: "{{time-12}}", description: "12-hour with AM/PM", example: "2:30 PM", expansion: $expansion)
-                                VariableButton(variable: "{{time-12-no-space}}", description: "12-hour no space", example: "2:30PM", expansion: $expansion)
-                                VariableButton(variable: "{{time-seconds}}", description: "With seconds", example: "2:30:45 PM", expansion: $expansion)
-                                VariableButton(variable: "{{time-24-seconds}}", description: "24-hour with seconds", example: "14:30:45", expansion: $expansion)
-                                VariableButton(variable: "{{hour}}", description: "Hour (12-format)", example: "2", expansion: $expansion)
-                                VariableButton(variable: "{{hour-24}}", description: "Hour (24-format)", example: "14", expansion: $expansion)
-                                VariableButton(variable: "{{minute}}", description: "Minutes", example: "30", expansion: $expansion)
-                                
-                                // Relative Dates
-                                Text("Relative Dates")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.purple)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
-                                
-                                VariableButton(variable: "{{date-1}}", description: "Yesterday", example: "Jan 14, 2025", expansion: $expansion)
-                                VariableButton(variable: "{{date+1}}", description: "Tomorrow", example: "Jan 16, 2025", expansion: $expansion)
-                                VariableButton(variable: "{{date-7}}", description: "One week ago", example: "Jan 8, 2025", expansion: $expansion)
-                                VariableButton(variable: "{{date+7}}", description: "One week from now", example: "Jan 22, 2025", expansion: $expansion)
-                                
-                                // Technical Formats
-                                Text("Technical")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.purple)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
-                                
-                                VariableButton(variable: "{{timestamp}}", description: "Unix timestamp", example: "1737033000", expansion: $expansion)
-                                VariableButton(variable: "{{timestamp-ms}}", description: "Timestamp with milliseconds", example: "1737033000000", expansion: $expansion)
+                                // Components group
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Components")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    
+                                    AddFlowLayout(spacing: 4) {
+                                        AddVariableButton(variable: "{{day}}", description: "Day number", example: "15", expansion: $expansion)
+                                        AddVariableButton(variable: "{{month}}", description: "Month number", example: "1", expansion: $expansion)
+                                        AddVariableButton(variable: "{{year}}", description: "Full year", example: "2025", expansion: $expansion)
+                                        AddVariableButton(variable: "{{timestamp}}", description: "Unix timestamp", example: "1737033000", expansion: $expansion)
+                                    }
+                                }
                             }
                         }
-                        .padding(12)
+                        .padding(10)
                         .background(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: 6)
                                 .fill(Color.purple.opacity(0.05))
                                 .stroke(Color.purple.opacity(0.2), lineWidth: 1)
                         )
@@ -433,5 +424,98 @@ struct AddTriggerModeRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Add Variable Button Component
+struct AddVariableButton: View {
+    let variable: String
+    let description: String
+    let example: String
+    @Binding var expansion: String
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            expansion += variable
+        }) {
+            Text(variable)
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundColor(.purple)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.purple.opacity(0.1))
+                        .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.96 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: isPressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+        .help("\(description) - Example: \(example)")
+    }
+}
+
+// MARK: - Add Flow Layout for Variables
+struct AddFlowLayout: Layout {
+    let spacing: CGFloat
+    
+    init(spacing: CGFloat = 8) {
+        self.spacing = spacing
+    }
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = AddFlowResult(
+            in: proposal.replacingUnspecifiedDimensions(),
+            subviews: subviews,
+            spacing: spacing
+        )
+        return result.bounds
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = AddFlowResult(
+            in: proposal.replacingUnspecifiedDimensions(),
+            subviews: subviews,
+            spacing: spacing
+        )
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.frames[index].minX,
+                                     y: bounds.minY + result.frames[index].minY),
+                         proposal: ProposedViewSize(result.frames[index].size))
+        }
+    }
+}
+
+struct AddFlowResult {
+    var frames: [CGRect] = []
+    var bounds: CGSize = .zero
+    
+    init(in rect: CGSize, subviews: LayoutSubviews, spacing: CGFloat) {
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            
+            if currentX + size.width > rect.width && currentX > 0 {
+                // Move to next line
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            
+            frames.append(CGRect(origin: CGPoint(x: currentX, y: currentY), size: size))
+            
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+        
+        bounds = CGSize(width: rect.width, height: currentY + lineHeight)
     }
 }
