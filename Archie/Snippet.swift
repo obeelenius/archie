@@ -5,12 +5,14 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
     var shortcut: String
     var expansion: String
     var isEnabled: Bool = true
+    var requiresSpace: Bool = true // New property for space requirement
     var collectionId: UUID? // Reference to collection
     var variables: [SnippetVariable] = [] // Variables used in this snippet
     
-    init(shortcut: String, expansion: String, collectionId: UUID? = nil) {
+    init(shortcut: String, expansion: String, requiresSpace: Bool = true, collectionId: UUID? = nil) {
         self.shortcut = shortcut
         self.expansion = expansion
+        self.requiresSpace = requiresSpace
         self.collectionId = collectionId
     }
     
