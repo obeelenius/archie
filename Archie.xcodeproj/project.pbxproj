@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0E1FECCD2E2917870026673B /* AddSnippetSlideOut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1FECCC2E2917870026673B /* AddSnippetSlideOut.swift */; };
+		0E1FECCF2E2917A80026673B /* EditSnippetSlideOut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1FECCE2E2917A80026673B /* EditSnippetSlideOut.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		0E1FEC702E28D8340026673B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,12 +32,24 @@
 		0E1FEC612E28D8320026673B /* Archie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Archie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0E1FEC6F2E28D8340026673B /* ArchieTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArchieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0E1FEC792E28D8340026673B /* ArchieUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArchieUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0E1FECCC2E2917870026673B /* AddSnippetSlideOut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSnippetSlideOut.swift; sourceTree = "<group>"; };
+		0E1FECCE2E2917A80026673B /* EditSnippetSlideOut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSnippetSlideOut.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0E1FEC632E28D8320026673B /* Archie */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Archie;
+			sourceTree = "<group>";
+		};
+		0E1FECD22E29180A0026673B /* Views */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Views;
+			sourceTree = "<group>";
+		};
+		0E1FECD32E29180D0026673B /* Managers */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Managers;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -67,6 +84,10 @@
 			children = (
 				0E1FEC632E28D8320026673B /* Archie */,
 				0E1FEC622E28D8320026673B /* Products */,
+				0E1FECCC2E2917870026673B /* AddSnippetSlideOut.swift */,
+				0E1FECCE2E2917A80026673B /* EditSnippetSlideOut.swift */,
+				0E1FECD32E29180D0026673B /* Managers */,
+				0E1FECD22E29180A0026673B /* Views */,
 			);
 			sourceTree = "<group>";
 		};
@@ -97,6 +118,8 @@
 			);
 			fileSystemSynchronizedGroups = (
 				0E1FEC632E28D8320026673B /* Archie */,
+				0E1FECD22E29180A0026673B /* Views */,
+				0E1FECD32E29180D0026673B /* Managers */,
 			);
 			name = Archie;
 			packageProductDependencies = (
@@ -218,6 +241,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E1FECCF2E2917A80026673B /* EditSnippetSlideOut.swift in Sources */,
+				0E1FECCD2E2917870026673B /* AddSnippetSlideOut.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
