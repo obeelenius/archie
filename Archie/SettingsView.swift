@@ -67,8 +67,8 @@ struct SettingsView: View {
                             .font(.title3)
                             .fontWeight(.medium)
                         
-                        Text(searchText.isEmpty ? 
-                             "Click 'Add Snippet' to create your first text expansion" : 
+                        Text(searchText.isEmpty ?
+                             "Click 'Add Snippet' to create your first text expansion" :
                              "Try a different search term")
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -284,7 +284,6 @@ struct AddSnippetView: View {
                 }
             }
             .navigationTitle("Add New Snippet")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {

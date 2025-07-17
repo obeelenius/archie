@@ -35,16 +35,6 @@
 			path = Archie;
 			sourceTree = "<group>";
 		};
-		0E1FEC722E28D8340026673B /* ArchieTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ArchieTests;
-			sourceTree = "<group>";
-		};
-		0E1FEC7C2E28D8340026673B /* ArchieUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ArchieUITests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,8 +66,6 @@
 			isa = PBXGroup;
 			children = (
 				0E1FEC632E28D8320026673B /* Archie */,
-				0E1FEC722E28D8340026673B /* ArchieTests */,
-				0E1FEC7C2E28D8340026673B /* ArchieUITests */,
 				0E1FEC622E28D8320026673B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -130,9 +118,6 @@
 			dependencies = (
 				0E1FEC712E28D8340026673B /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				0E1FEC722E28D8340026673B /* ArchieTests */,
-			);
 			name = ArchieTests;
 			packageProductDependencies = (
 			);
@@ -152,9 +137,6 @@
 			);
 			dependencies = (
 				0E1FEC7B2E28D8340026673B /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				0E1FEC7C2E28D8340026673B /* ArchieUITests */,
 			);
 			name = ArchieUITests;
 			packageProductDependencies = (
