@@ -224,56 +224,79 @@ struct AddSnippetView: View {
     @State private var errorMessage = ""
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Add New Snippet")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            
+            Divider()
+            
+            // Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Shortcut Section
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Shortcut")
+                        Text("Shortcut Configuration")
                             .font(.headline)
-                        
-                        TextField("Enter shortcut (e.g., 'addr', '@@')", text: $shortcut)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
-                        
-                        Text("Type this sequence followed by a space to trigger expansion")
-                            .font(.caption)
                             .foregroundColor(.secondary)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Shortcut")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            TextField("Enter shortcut (e.g., 'addr', '@@')", text: $shortcut)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                            
+                            Text("Type this sequence followed by a space to trigger expansion")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
-                } header: {
-                    Text("Shortcut Configuration")
-                }
-                
-                Section {
+                    
+                    // Expansion Section
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Expansion")
+                        Text("Expansion Text")
                             .font(.headline)
-                        
-                        TextEditor(text: $expansion)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(minHeight: 100)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                            )
-                        
-                        Text("This text will replace your shortcut. Use \\n for line breaks.")
-                            .font(.caption)
                             .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("Expansion Text")
-                }
-                
-                Section {
-                    HStack {
-                        Image(systemName: "lightbulb")
-                            .foregroundColor(.orange)
                         
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Expansion")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            TextEditor(text: $expansion)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(minHeight: 120, maxHeight: 200)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                                )
+                            
+                            Text("This text will replace your shortcut. Use \\n for line breaks.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    // Pro Tips Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "lightbulb")
+                                .foregroundColor(.orange)
                             Text("Pro Tips")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                            
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("• Use memorable abbreviations")
                             Text("• Start with special characters (@, #) to avoid conflicts")
                             Text("• Keep shortcuts short but unique")
@@ -281,25 +304,34 @@ struct AddSnippetView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     }
+                    .padding()
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
                 }
+                .padding()
             }
-            .navigationTitle("Add New Snippet")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
+            
+            Divider()
+            
+            // Bottom buttons
+            HStack {
+                Spacer()
                 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveSnippet()
-                    }
-                    .disabled(shortcut.isEmpty || expansion.isEmpty)
+                Button("Cancel") {
+                    dismiss()
                 }
+                .buttonStyle(.bordered)
+                
+                Button("Save") {
+                    saveSnippet()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(shortcut.isEmpty || expansion.isEmpty)
             }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
         }
-        .frame(width: 500, height: 450)
+        .frame(minWidth: 500, maxWidth: 700, minHeight: 600, maxHeight: 800)
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
         } message: {

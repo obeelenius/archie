@@ -24,19 +24,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Show in both dock and menu bar
         NSApp.setActivationPolicy(.regular)
         
-        // Set the dock icon to use our custom app icon at high resolution
-        if let appIcon = NSImage(named: "AppIcon") {
+        // Set the dock icon to use our custom dock icon at high resolution
+        if let dockIcon = NSImage(named: "DockIcon") {
             // Force high resolution for dock
+            dockIcon.size = NSSize(width: 512, height: 512)
+            NSApp.applicationIconImage = dockIcon
+        } else if let appIcon = NSImage(named: "AppIcon") {
+            // Fallback to AppIcon if DockIcon doesn't exist
             appIcon.size = NSSize(width: 512, height: 512)
             NSApp.applicationIconImage = appIcon
         }
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // When dock icon is clicked, open preferences using modern approach
-        Task { @MainActor in
-            NSApp.activate(ignoringOtherApps: true)
-            NSApp.keyWindow?.makeKeyAndOrderFront(nil)
+        // When dock icon is clicked, open preferences
+        print("Dock icon clicked!") // Debug output
+        DispatchQueue.main.async {
+            self.openSettingsWindow()
         }
         return true
     }
@@ -45,11 +49,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem?.button {
-            // Try to use custom app icon first, fallback to system symbol
-            if let appIcon = NSImage(named: "AppIcon") {
-                button.image = appIcon
-                // Resize for menu bar (typically 22x22 points)
-                appIcon.size = NSSize(width: 22, height: 22)
+            // Use dedicated menu bar icon if available, otherwise fallback to app icon or system symbol
+            if let menuBarIcon = NSImage(named: "MenuBarIcon") {
+                menuBarIcon.size = NSSize(width: 18, height: 18)
+                button.image = menuBarIcon
+            } else if let appIcon = NSImage(named: "AppIcon") {
+                // Create a copy for menu bar with proper size
+                let resizedAppIcon = appIcon.copy() as! NSImage
+                resizedAppIcon.size = NSSize(width: 18, height: 18)
+                button.image = resizedAppIcon
             } else {
                 button.image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: "Archie")
             }
@@ -63,9 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenu() {
         let menu = NSMenu()
         
-        // Create a SwiftUI-based menu item for preferences
-        let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ",")
-        menu.addItem(preferencesItem)
+        menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
@@ -77,7 +83,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func openPreferences() {
-        // Open settings using keyboard shortcut (Cmd+,) which SwiftUI handles natively
+        openSettingsWindow()
+    }
+    
+    private func openSettingsWindow() {
+        print("Attempting to open settings window") // Debug output
+        
+        // First try to find and bring existing settings window to front
+        for window in NSApp.windows {
+            print("Found window: \(window.title)") // Debug output
+            if window.title.contains("Settings") || window.title.contains("Preferences") || window.title.contains("Archie") {
+                print("Bringing existing window to front")
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                return
+            }
+        }
+        
+        print("No existing window found, creating new one")
+        
+        // Use keyboard shortcut approach that works reliably
         let event = NSEvent.keyEvent(with: .keyDown,
                                    location: NSPoint.zero,
                                    modifierFlags: .command,
