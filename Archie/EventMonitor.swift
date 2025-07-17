@@ -1,11 +1,3 @@
-//
-//  EventMonitor.swift
-//  Archie
-//
-//  Created by Amy Elenius on 17/7/2025.
-//
-
-
 import Cocoa
 import Carbon
 
@@ -40,13 +32,13 @@ class EventMonitor: ObservableObject {
         
         // Handle space or return - potential trigger
         if char == " " || char == "\r" || char == "\n" {
-            checkForSnippetMatch()
+            checkForSnippetMatch(delimiter: char)
             typedBuffer = ""
             return
         }
         
-        // Add character to buffer
-        if char.count == 1 && char.rangeOfCharacter(from: .alphanumerics) != nil {
+        // Add character to buffer (including special characters for collection suffixes)
+        if char.count == 1 {
             typedBuffer += char
             
             // Keep buffer reasonable size
@@ -56,20 +48,61 @@ class EventMonitor: ObservableObject {
         }
     }
     
-    private func checkForSnippetMatch() {
-        if let expansion = snippetManager.getExpansion(for: typedBuffer) {
-            performTextReplacement(shortcut: typedBuffer, expansion: expansion)
+    private func checkForSnippetMatch(delimiter: String) {
+        // Check for matches with different possible suffix combinations
+        var potentialShortcuts: [String] = [typedBuffer]
+        
+        // Add variations with collection suffixes
+        for collection in snippetManager.collections.filter({ $0.isEnabled }) {
+            if !collection.suffix.isEmpty && typedBuffer.hasSuffix(collection.suffix) {
+                let baseShortcut = String(typedBuffer.dropLast(collection.suffix.count))
+                potentialShortcuts.append(baseShortcut + collection.suffix)
+            }
+        }
+        
+        // Try to find a matching snippet
+        for shortcut in potentialShortcuts {
+            if let expansion = snippetManager.getExpansion(for: shortcut) {
+                // Find the collection to check keep delimiter setting
+                let collection = findCollectionForShortcut(shortcut)
+                let keepDelimiter = collection?.keepDelimiter ?? false
+                
+                performTextReplacement(
+                    shortcut: shortcut,
+                    expansion: expansion,
+                    keepDelimiter: keepDelimiter,
+                    delimiter: delimiter
+                )
+                return
+            }
         }
     }
     
-    private func performTextReplacement(shortcut: String, expansion: String) {
+    private func findCollectionForShortcut(_ shortcut: String) -> SnippetCollection? {
+        for collection in snippetManager.collections {
+            let collectionSnippets = snippetManager.snippets(for: collection)
+            for snippet in collectionSnippets {
+                if snippet.fullShortcut(with: collection) == shortcut {
+                    return collection
+                }
+            }
+        }
+        return nil
+    }
+    
+    private func performTextReplacement(shortcut: String, expansion: String, keepDelimiter: Bool, delimiter: String) {
         // Delete the typed shortcut
         for _ in 0..<shortcut.count {
             simulateKeyPress(keyCode: 51) // Backspace
         }
         
         // Insert the expansion
-        insertText(expansion)
+        var finalText = expansion
+        if keepDelimiter {
+            finalText += delimiter
+        }
+        
+        insertText(finalText)
     }
     
     private func simulateKeyPress(keyCode: UInt16) {

@@ -9,6 +9,8 @@ struct ArchieApp: App {
         Settings {
             SettingsView()
         }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 900, height: 600)
     }
 }
 
