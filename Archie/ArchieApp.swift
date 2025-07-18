@@ -1,6 +1,9 @@
+// ArchieApp.swift
+
 import SwiftUI
 import Cocoa
 
+// MARK: - Main App Structure 100073
 @main
 struct ArchieApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -18,6 +21,7 @@ struct ArchieApp: App {
     }
 }
 
+// MARK: - App Delegate 100074
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarItem: NSStatusItem?
     var eventMonitor: EventMonitor?
@@ -26,7 +30,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         setupEventMonitoring()
-        
+        setupAppIcons()
+    }
+    
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // When dock icon is clicked, open preferences
+        print("Dock icon clicked!") // Debug output
+        DispatchQueue.main.async {
+            self.openSettingsWindow()
+        }
+        return true
+    }
+}
+
+// MARK: - App Icon Setup 100075
+extension AppDelegate {
+    private func setupAppIcons() {
         // Show in both dock and menu bar
         NSApp.setActivationPolicy(.regular)
         
@@ -41,37 +60,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.applicationIconImage = appIcon
         }
     }
-    
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // When dock icon is clicked, open preferences
-        print("Dock icon clicked!") // Debug output
-        DispatchQueue.main.async {
-            self.openSettingsWindow()
-        }
-        return true
-    }
-    
+}
+
+// MARK: - Menu Bar Setup 100076
+extension AppDelegate {
     private func setupMenuBar() {
         statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusBarItem?.button {
-            // Use dedicated menu bar icon if available, otherwise fallback to app icon or system symbol
-            if let menuBarIcon = NSImage(named: "MenuBarIcon") {
-                menuBarIcon.size = NSSize(width: 18, height: 18)
-                button.image = menuBarIcon
-            } else if let appIcon = NSImage(named: "AppIcon") {
-                // Create a copy for menu bar with proper size
-                let resizedAppIcon = appIcon.copy() as! NSImage
-                resizedAppIcon.size = NSSize(width: 18, height: 18)
-                button.image = resizedAppIcon
-            } else {
-                button.image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: "Archie")
-            }
+            configureMenuBarButton(button)
             button.action = #selector(menuBarClicked)
             button.target = self
         }
         
         setupMenu()
+    }
+    
+    private func configureMenuBarButton(_ button: NSStatusBarButton) {
+        // Use dedicated menu bar icon if available, otherwise fallback to app icon or system symbol
+        if let menuBarIcon = NSImage(named: "MenuBarIcon") {
+            menuBarIcon.size = NSSize(width: 18, height: 18)
+            button.image = menuBarIcon
+        } else if let appIcon = NSImage(named: "AppIcon") {
+            // Create a copy for menu bar with proper size
+            let resizedAppIcon = appIcon.copy() as! NSImage
+            resizedAppIcon.size = NSSize(width: 18, height: 18)
+            button.image = resizedAppIcon
+        } else {
+            button.image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: "Archie")
+        }
     }
     
     private func setupMenu() {
@@ -91,7 +108,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openPreferences() {
         openSettingsWindow()
     }
-    
+}
+
+// MARK: - Window Management 100077
+extension AppDelegate {
     private func openSettingsWindow() {
         // Look for existing settings window
         for window in NSApp.windows {
@@ -111,7 +131,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
     }
-    
+}
+
+// MARK: - Event Monitoring Setup 100078
+extension AppDelegate {
     private func setupEventMonitoring() {
         eventMonitor = EventMonitor()
         

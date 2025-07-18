@@ -1,5 +1,8 @@
+// Snippet.swift
+
 import Foundation
 
+// MARK: - Snippet Model 100001
 struct Snippet: Identifiable, Codable, Hashable, Equatable {
     var id = UUID()
     var shortcut: String
@@ -15,7 +18,10 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
         self.requiresSpace = requiresSpace
         self.collectionId = collectionId
     }
-    
+}
+
+// MARK: - Snippet Hashable Conformance 100002
+extension Snippet {
     // Hashable conformance
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -25,7 +31,10 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
     static func == (lhs: Snippet, rhs: Snippet) -> Bool {
         return lhs.id == rhs.id
     }
-    
+}
+
+// MARK: - Snippet Helper Methods 100003
+extension Snippet {
     // Get the full shortcut including collection suffix
     func fullShortcut(with collection: SnippetCollection?) -> String {
         guard let collection = collection, !collection.suffix.isEmpty else {
@@ -33,7 +42,10 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
         }
         return shortcut + collection.suffix
     }
-    
+}
+
+// MARK: - Snippet Variable Processing 100004
+extension Snippet {
     // Process variables in expansion text - UPDATED WITH ALL NEW VARIABLES
     func processedExpansion() -> String {
         var processed = self.expansion
@@ -42,7 +54,7 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
         let now = Date()
         let calendar = Calendar.current
         
-        // MARK: - Date Variables
+        // MARK: - Date Variables 100005
         
         // Default date (medium style)
         let defaultDateFormatter = DateFormatter()
@@ -79,140 +91,177 @@ struct Snippet: Identifiable, Codable, Hashable, Equatable {
         compactDateFormatter.dateFormat = "yyyyMMdd"
         processed = processed.replacingOccurrences(of: "{{date-compact}}", with: compactDateFormatter.string(from: now))
         
-        // MARK: - Date Components
+        return processed
+    }
+}
+
+// MARK: - Date Components Processing 100006
+extension Snippet {
+    private func processDateComponents(_ processed: String, with now: Date) -> String {
+        var result = processed
         
         // Day number
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "d"
-        processed = processed.replacingOccurrences(of: "{{day}}", with: dayFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{day}}", with: dayFormatter.string(from: now))
         
         // Day name (full)
         let dayNameFormatter = DateFormatter()
         dayNameFormatter.dateFormat = "EEEE"
-        processed = processed.replacingOccurrences(of: "{{day-name}}", with: dayNameFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{day-name}}", with: dayNameFormatter.string(from: now))
         
         // Day name (short)
         let dayShortFormatter = DateFormatter()
         dayShortFormatter.dateFormat = "EEE"
-        processed = processed.replacingOccurrences(of: "{{day-short}}", with: dayShortFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{day-short}}", with: dayShortFormatter.string(from: now))
         
         // Month number
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "M"
-        processed = processed.replacingOccurrences(of: "{{month}}", with: monthFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{month}}", with: monthFormatter.string(from: now))
         
         // Month name (full)
         let monthNameFormatter = DateFormatter()
         monthNameFormatter.dateFormat = "MMMM"
-        processed = processed.replacingOccurrences(of: "{{month-name}}", with: monthNameFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{month-name}}", with: monthNameFormatter.string(from: now))
         
         // Month name (short)
         let monthShortFormatter = DateFormatter()
         monthShortFormatter.dateFormat = "MMM"
-        processed = processed.replacingOccurrences(of: "{{month-short}}", with: monthShortFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{month-short}}", with: monthShortFormatter.string(from: now))
         
         // Year (full)
         let yearFormatter = DateFormatter()
         yearFormatter.dateFormat = "yyyy"
-        processed = processed.replacingOccurrences(of: "{{year}}", with: yearFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{year}}", with: yearFormatter.string(from: now))
         
         // Year (short)
         let yearShortFormatter = DateFormatter()
         yearShortFormatter.dateFormat = "yy"
-        processed = processed.replacingOccurrences(of: "{{year-short}}", with: yearShortFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{year-short}}", with: yearShortFormatter.string(from: now))
         
-        // MARK: - Time Variables
+        return result
+    }
+}
+
+// MARK: - Time Variables Processing 100007
+extension Snippet {
+    private func processTimeVariables(_ processed: String, with now: Date) -> String {
+        var result = processed
         
         // Default time (short style)
         let defaultTimeFormatter = DateFormatter()
         defaultTimeFormatter.dateStyle = .none
         defaultTimeFormatter.timeStyle = .short
-        processed = processed.replacingOccurrences(of: "{{time}}", with: defaultTimeFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time}}", with: defaultTimeFormatter.string(from: now))
         
         // 24-hour format
         let time24Formatter = DateFormatter()
         time24Formatter.dateFormat = "HH:mm"
-        processed = processed.replacingOccurrences(of: "{{time-24}}", with: time24Formatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time-24}}", with: time24Formatter.string(from: now))
         
         // 12-hour with AM/PM
         let time12Formatter = DateFormatter()
         time12Formatter.dateFormat = "h:mm a"
-        processed = processed.replacingOccurrences(of: "{{time-12}}", with: time12Formatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time-12}}", with: time12Formatter.string(from: now))
         
         // 12-hour no space
         let time12NoSpaceFormatter = DateFormatter()
         time12NoSpaceFormatter.dateFormat = "h:mma"
-        processed = processed.replacingOccurrences(of: "{{time-12-no-space}}", with: time12NoSpaceFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time-12-no-space}}", with: time12NoSpaceFormatter.string(from: now))
         
         // With seconds (12-hour)
         let timeSecondsFormatter = DateFormatter()
         timeSecondsFormatter.dateFormat = "h:mm:ss a"
-        processed = processed.replacingOccurrences(of: "{{time-seconds}}", with: timeSecondsFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time-seconds}}", with: timeSecondsFormatter.string(from: now))
         
         // 24-hour with seconds
         let time24SecondsFormatter = DateFormatter()
         time24SecondsFormatter.dateFormat = "HH:mm:ss"
-        processed = processed.replacingOccurrences(of: "{{time-24-seconds}}", with: time24SecondsFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{time-24-seconds}}", with: time24SecondsFormatter.string(from: now))
         
         // Hour (12-format)
         let hourFormatter = DateFormatter()
         hourFormatter.dateFormat = "h"
-        processed = processed.replacingOccurrences(of: "{{hour}}", with: hourFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{hour}}", with: hourFormatter.string(from: now))
         
         // Hour (24-format)
         let hour24Formatter = DateFormatter()
         hour24Formatter.dateFormat = "HH"
-        processed = processed.replacingOccurrences(of: "{{hour-24}}", with: hour24Formatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{hour-24}}", with: hour24Formatter.string(from: now))
         
         // Minutes
         let minuteFormatter = DateFormatter()
         minuteFormatter.dateFormat = "mm"
-        processed = processed.replacingOccurrences(of: "{{minute}}", with: minuteFormatter.string(from: now))
+        result = result.replacingOccurrences(of: "{{minute}}", with: minuteFormatter.string(from: now))
         
-        // MARK: - Relative Dates
-        
-        // Yesterday
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        processed = processed.replacingOccurrences(of: "{{date-1}}", with: defaultDateFormatter.string(from: yesterday))
-        
-        // Tomorrow
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now
-        processed = processed.replacingOccurrences(of: "{{date+1}}", with: defaultDateFormatter.string(from: tomorrow))
-        
-        // One week ago
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
-        processed = processed.replacingOccurrences(of: "{{date-7}}", with: defaultDateFormatter.string(from: weekAgo))
-        
-        // One week from now
-        let weekFromNow = calendar.date(byAdding: .day, value: 7, to: now) ?? now
-        processed = processed.replacingOccurrences(of: "{{date+7}}", with: defaultDateFormatter.string(from: weekFromNow))
-        
-        // MARK: - Technical Formats
-        
-        // Unix timestamp
-        processed = processed.replacingOccurrences(of: "{{timestamp}}", with: String(Int(now.timeIntervalSince1970)))
-        
-        // Unix timestamp with milliseconds
-        processed = processed.replacingOccurrences(of: "{{timestamp-ms}}", with: String(Int(now.timeIntervalSince1970 * 1000)))
-        
-        return processed
+        return result
     }
 }
 
+// MARK: - Relative Dates Processing 100008
+extension Snippet {
+    private func processRelativeDates(_ processed: String, with now: Date, calendar: Calendar) -> String {
+        var result = processed
+        let defaultDateFormatter = DateFormatter()
+        defaultDateFormatter.dateStyle = .medium
+        defaultDateFormatter.timeStyle = .none
+        
+        // Yesterday
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        result = result.replacingOccurrences(of: "{{date-1}}", with: defaultDateFormatter.string(from: yesterday))
+        
+        // Tomorrow
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+        result = result.replacingOccurrences(of: "{{date+1}}", with: defaultDateFormatter.string(from: tomorrow))
+        
+        // One week ago
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+        result = result.replacingOccurrences(of: "{{date-7}}", with: defaultDateFormatter.string(from: weekAgo))
+        
+        // One week from now
+        let weekFromNow = calendar.date(byAdding: .day, value: 7, to: now) ?? now
+        result = result.replacingOccurrences(of: "{{date+7}}", with: defaultDateFormatter.string(from: weekFromNow))
+        
+        return result
+    }
+}
+
+// MARK: - Technical Formats Processing 100009
+extension Snippet {
+    private func processTechnicalFormats(_ processed: String, with now: Date) -> String {
+        var result = processed
+        
+        // Unix timestamp
+        result = result.replacingOccurrences(of: "{{timestamp}}", with: String(Int(now.timeIntervalSince1970)))
+        
+        // Unix timestamp with milliseconds
+        result = result.replacingOccurrences(of: "{{timestamp-ms}}", with: String(Int(now.timeIntervalSince1970 * 1000)))
+        
+        return result
+    }
+}
+
+// MARK: - Snippet Collection Model 100010
 struct SnippetCollection: Identifiable, Codable, Hashable, Equatable {
     var id = UUID()
     var name: String
-    var suffix: String = "" // e.g., ";" or ".."
-    var keepDelimiter: Bool = false // Keep the trigger delimiter (space)
-    var color: String = "blue" // For UI theming
+    var suffix: String = ""
+    var keepDelimiter: Bool = false
+    var color: String = "blue"
     var isEnabled: Bool = true
+    var icon: String = ""
     
-    init(name: String, suffix: String = "", keepDelimiter: Bool = false) {
+    init(name: String, suffix: String = "", keepDelimiter: Bool = false, icon: String = "") {
         self.name = name
         self.suffix = suffix
         self.keepDelimiter = keepDelimiter
+        self.icon = icon
     }
-    
+}
+
+// MARK: - Snippet Collection Conformance 100011
+extension SnippetCollection {
     // Hashable conformance
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -224,6 +273,7 @@ struct SnippetCollection: Identifiable, Codable, Hashable, Equatable {
     }
 }
 
+// MARK: - Snippet Variable Model 100012
 struct SnippetVariable: Identifiable, Codable {
     var id = UUID()
     var name: String

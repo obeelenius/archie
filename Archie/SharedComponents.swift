@@ -1,9 +1,11 @@
+// SharedComponents.swift
+
 import SwiftUI
 
-// MARK: - All Shared UI Components
+// MARK: - All Shared UI Components 100084
 // Put ALL shared components in this one file to avoid duplicates
 
-// MARK: - Resize Handle Component
+// MARK: - Resize Handle Component 100085
 struct ResizeHandle: View {
     @Binding var editorWidth: CGFloat
     let windowWidth: CGFloat
@@ -17,92 +19,112 @@ struct ResizeHandle: View {
             .fill(Color.clear)
             .frame(width: 12)
             .contentShape(Rectangle())
-            .background(
-                Rectangle()
-                    .fill(isHovered || isDragging ? Color.accentColor.opacity(0.2) : Color.clear)
-                    .animation(.easeInOut(duration: 0.2), value: isHovered || isDragging)
-            )
-            .overlay(
-                Rectangle()
-                    .fill(Color(NSColor.separatorColor))
-                    .frame(width: isDragging ? 2 : 1)
-                    .animation(.easeInOut(duration: 0.1), value: isDragging)
-            )
+            .background(resizeHandleBackground)
+            .overlay(resizeHandleBorder)
             .cursor(NSCursor.resizeLeftRight)
             .onHover { hovering in
                 isHovered = hovering
             }
-            .gesture(
-                DragGesture(coordinateSpace: .global)
-                    .onChanged { value in
-                        if !isDragging {
-                            isDragging = true
-                            startWidth = editorWidth
-                            startLocation = value.startLocation.x
-                        }
-                        
-                        let deltaX = value.location.x - startLocation
-                        let deltaWidth = -deltaX / windowWidth
-                        let newWidth = startWidth + deltaWidth
-                        
-                        editorWidth = min(max(newWidth, 0.25), 0.65)
-                    }
-                    .onEnded { _ in
-                        isDragging = false
-                        
-                        let snapTargets: [CGFloat] = [0.25, 0.33, 0.4, 0.5, 0.6, 0.65]
-                        let snapThreshold: CGFloat = 0.03
-                        
-                        for target in snapTargets {
-                            if abs(editorWidth - target) < snapThreshold {
-                                withAnimation(.easeOut(duration: 0.3)) {
-                                    editorWidth = target
-                                }
-                                return
-                            }
-                        }
-                    }
-            )
+            .gesture(resizeGesture)
+    }
+    
+    private var resizeHandleBackground: some View {
+        Rectangle()
+            .fill(isHovered || isDragging ? Color.accentColor.opacity(0.2) : Color.clear)
+            .animation(.easeInOut(duration: 0.2), value: isHovered || isDragging)
+    }
+    
+    private var resizeHandleBorder: some View {
+        Rectangle()
+            .fill(Color(NSColor.separatorColor))
+            .frame(width: isDragging ? 2 : 1)
+            .animation(.easeInOut(duration: 0.1), value: isDragging)
+    }
+    
+    private var resizeGesture: some Gesture {
+        DragGesture(coordinateSpace: .global)
+            .onChanged { value in
+                if !isDragging {
+                    isDragging = true
+                    startWidth = editorWidth
+                    startLocation = value.startLocation.x
+                }
+                
+                let deltaX = value.location.x - startLocation
+                let deltaWidth = -deltaX / windowWidth
+                let newWidth = startWidth + deltaWidth
+                
+                editorWidth = min(max(newWidth, 0.25), 0.65)
+            }
+            .onEnded { _ in
+                isDragging = false
+                handleSnapToTargets()
+            }
+    }
+    
+    private func handleSnapToTargets() {
+        let snapTargets: [CGFloat] = [0.25, 0.33, 0.4, 0.5, 0.6, 0.65]
+        let snapThreshold: CGFloat = 0.03
+        
+        for target in snapTargets {
+            if abs(editorWidth - target) < snapThreshold {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    editorWidth = target
+                }
+                return
+            }
+        }
     }
 }
 
-// MARK: - Empty State View
+// MARK: - Empty State View 100086
 struct EmptyStateView: View {
     let isSearching: Bool
     
     var body: some View {
         VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: isSearching ? "magnifyingglass" : "doc.text.below.ecg")
-                    .font(.system(size: 32))
-                    .foregroundColor(.accentColor)
-            }
-            
-            VStack(spacing: 12) {
-                Text(isSearching ? "No matching snippets" : "No snippets yet")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                
-                Text(isSearching ?
-                     "Try adjusting your search terms or click 'Add' to create a new one" :
-                     "Click 'Add' to create your first text expansion")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-            }
+            emptyStateIcon
+            emptyStateText
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
     }
+    
+    private var emptyStateIcon: some View {
+        ZStack {
+            Circle()
+                .fill(Color.accentColor.opacity(0.1))
+                .frame(width: 80, height: 80)
+            
+            Image(systemName: isSearching ? "magnifyingglass" : "doc.text.below.ecg")
+                .font(.system(size: 32))
+                .foregroundColor(.accentColor)
+        }
+    }
+    
+    private var emptyStateText: some View {
+        VStack(spacing: 12) {
+            Text(isSearching ? "No matching snippets" : "No snippets yet")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            
+            Text(emptyStateMessage)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        isSearching ?
+        "Try adjusting your search terms or click 'Add' to create a new one" :
+        "Click 'Add' to create your first text expansion"
+    }
 }
 
-// MARK: - Compact Toggle Style
+// MARK: - Compact Toggle Style 100087
 struct CompactToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack {
@@ -111,22 +133,24 @@ struct CompactToggleStyle: ToggleStyle {
             RoundedRectangle(cornerRadius: 8)
                 .fill(configuration.isOn ? Color.green : Color(NSColor.controlColor))
                 .frame(width: 32, height: 18)
-                .overlay(
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 14, height: 14)
-                        .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 0.5)
-                        .offset(x: configuration.isOn ? 7 : -7)
-                        .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
-                )
+                .overlay(toggleThumb(configuration))
                 .onTapGesture {
                     configuration.isOn.toggle()
                 }
         }
     }
+    
+    private func toggleThumb(_ configuration: Configuration) -> some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: 14, height: 14)
+            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 0.5)
+            .offset(x: configuration.isOn ? 7 : -7)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
+    }
 }
 
-// MARK: - Modern Toggle Style
+// MARK: - Modern Toggle Style 100088
 struct ModernToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack {
@@ -135,22 +159,24 @@ struct ModernToggleStyle: ToggleStyle {
             RoundedRectangle(cornerRadius: 12)
                 .fill(configuration.isOn ? Color.green : Color(NSColor.controlColor))
                 .frame(width: 44, height: 24)
-                .overlay(
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 20, height: 20)
-                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-                        .offset(x: configuration.isOn ? 10 : -10)
-                        .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
-                )
+                .overlay(modernToggleThumb(configuration))
                 .onTapGesture {
                     configuration.isOn.toggle()
                 }
         }
     }
+    
+    private func modernToggleThumb(_ configuration: Configuration) -> some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: 20, height: 20)
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+            .offset(x: configuration.isOn ? 10 : -10)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
+    }
 }
 
-// MARK: - Compact Action Button
+// MARK: - Compact Action Button 100089
 struct CompactActionButton: View {
     let title: String
     let icon: String
@@ -170,11 +196,7 @@ struct CompactActionButton: View {
             .foregroundColor(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(color.opacity(isPressed ? 0.2 : 0.1))
-                    .stroke(color.opacity(0.3), lineWidth: 1)
-            )
+            .background(buttonBackground)
         }
         .buttonStyle(.plain)
         .scaleEffect(isPressed ? 0.95 : 1.0)
@@ -184,9 +206,15 @@ struct CompactActionButton: View {
             }
         }, perform: {})
     }
+    
+    private var buttonBackground: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(color.opacity(isPressed ? 0.2 : 0.1))
+            .stroke(color.opacity(0.3), lineWidth: 1)
+    }
 }
 
-// MARK: - Compact Tip Component
+// MARK: - Compact Tip Component 100090
 struct CompactTip: View {
     let text: String
     
@@ -203,7 +231,7 @@ struct CompactTip: View {
     }
 }
 
-// MARK: - Settings Section Component
+// MARK: - Settings Section Component 100091
 struct SettingsSection<Content: View>: View {
     let title: String
     let icon: String
@@ -217,22 +245,25 @@ struct SettingsSection<Content: View>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 16))
-                
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-            }
-            
+            sectionHeader
             content
+        }
+    }
+    
+    private var sectionHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundColor(.accentColor)
+                .font(.system(size: 16))
+            
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
         }
     }
 }
 
-// MARK: - Settings Row Component
+// MARK: - Settings Row Component 100092
 struct SettingsRow<Content: View>: View {
     let title: String
     let subtitle: String
@@ -264,10 +295,11 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
-// MARK: - Collection Card Component
+// MARK: - Collection Card Component 100093
 struct CollectionCard: View {
-    let name: String
+    let collection: SnippetCollection
     let snippets: [Snippet]
+    @Binding var editingCollection: SnippetCollection?
     @State private var isExpanded = false
     
     var enabledCount: Int {
@@ -276,94 +308,146 @@ struct CollectionCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            collectionHeader
+            collectionPreview
+            expandedContent
+        }
+        .padding(12)
+        .background(cardBackground)
+    }
+    
+    private var collectionHeader: some View {
+        HStack {
+            HStack(spacing: 8) {
+                collectionIcon
+                collectionInfo
+            }
+            
+            Spacer()
+            
+            collectionActions
+        }
+    }
+    
+    private var collectionIcon: some View {
+        Image(systemName: collection.icon.isEmpty ? "folder" : collection.icon)
+            .foregroundColor(.accentColor)
+            .font(.system(size: 16))
+    }
+    
+    private var collectionInfo: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(collection.name)
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            Text("\(snippets.count) snippets • \(enabledCount) enabled")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private var collectionActions: some View {
+        HStack(spacing: 8) {
+            Button("Edit") {
+                editingCollection = collection
+            }
+            .font(.system(size: 12))
+            .foregroundColor(.accentColor)
+            .buttonStyle(.plain)
+            
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    @ViewBuilder
+    private var collectionPreview: some View {
+        if !isExpanded && !snippets.isEmpty {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(name)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text("\(snippets.count) snippets • \(enabledCount) enabled")
+                ForEach(Array(snippets.prefix(3)), id: \.id) { snippet in
+                    snippetPreview(snippet)
+                }
+                
+                if snippets.count > 3 {
+                    Text("+\(snippets.count - 3)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
-                
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isExpanded.toggle()
-                    }
-                }) {
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.plain)
-            }
-            
-            if !isExpanded {
-                HStack {
-                    ForEach(Array(snippets.prefix(3)), id: \.id) { snippet in
-                        Text(snippet.shortcut)
-                            .font(.system(.caption, design: .monospaced))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.accentColor.opacity(0.1))
-                            )
-                            .foregroundColor(.accentColor)
-                    }
-                    
-                    if snippets.count > 3 {
-                        Text("+\(snippets.count - 3)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-            }
-            
-            if isExpanded {
-                VStack(spacing: 8) {
-                    ForEach(snippets) { snippet in
-                        HStack {
-                            Text(snippet.shortcut)
-                                .font(.system(.caption, design: .monospaced))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.accentColor.opacity(0.1))
-                                )
-                                .foregroundColor(.accentColor)
-                            
-                            Image(systemName: "arrow.right")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                            
-                            Text(snippet.expansion.replacingOccurrences(of: "\n", with: " "))
-                                .font(.caption)
-                                .lineLimit(1)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Circle()
-                                .fill(snippet.isEnabled ? Color.green : Color.gray)
-                                .frame(width: 8, height: 8)
-                        }
-                    }
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
-        )
+    }
+    
+    private func snippetPreview(_ snippet: Snippet) -> some View {
+        Text(snippet.shortcut)
+            .font(.system(.caption, design: .monospaced))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.accentColor.opacity(0.1))
+            )
+            .foregroundColor(.accentColor)
+    }
+    
+    @ViewBuilder
+    private var expandedContent: some View {
+        if isExpanded {
+            VStack(spacing: 8) {
+                ForEach(snippets) { snippet in
+                    expandedSnippetRow(snippet)
+                }
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+    
+    private func expandedSnippetRow(_ snippet: Snippet) -> some View {
+        HStack {
+            Text(snippet.shortcut)
+                .font(.system(.caption, design: .monospaced))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.accentColor.opacity(0.1))
+                )
+                .foregroundColor(.accentColor)
+            
+            Image(systemName: "arrow.right")
+                .foregroundColor(.secondary)
+                .font(.caption)
+            
+            Text(snippet.expansion.replacingOccurrences(of: "\n", with: " "))
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Circle()
+                .fill(snippet.isEnabled ? Color.green : Color.gray)
+                .frame(width: 8, height: 8)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.white)
+        .cornerRadius(6)
+    }
+    
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color(NSColor.controlBackgroundColor))
+            .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
     }
 }

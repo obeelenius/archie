@@ -1,8 +1,8 @@
-//  SnippetsListView.swift
+// SnippetListsView.swift
 
 import SwiftUI
 
-// MARK: - Snippets List View
+// MARK: - Snippets List View 100144
 struct SnippetsListView: View {
     let groupedSnippets: [String: [Snippet]]
     @Binding var editingSnippet: Snippet?
@@ -43,7 +43,7 @@ struct SnippetsListView: View {
     }
 }
 
-// MARK: - Collection Section View (Broken out to help compiler)
+// MARK: - Collection Section View 100145
 struct CollectionSectionView: View {
     let collectionName: String
     let snippets: [Snippet]
@@ -53,7 +53,6 @@ struct CollectionSectionView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Collection Header
             CollectionHeaderView(
                 title: collectionName,
                 snippetCount: snippets.count,
@@ -63,7 +62,6 @@ struct CollectionSectionView: View {
                 onToggle: onToggle
             )
             
-            // Expanded snippet cards
             if isExpanded {
                 ExpandedSnippetsView(
                     snippets: snippets,
@@ -74,7 +72,7 @@ struct CollectionSectionView: View {
     }
 }
 
-// MARK: - Collection Header View (Broken out to help compiler)
+// MARK: - Collection Header View 100146
 struct CollectionHeaderView: View {
     let title: String
     let snippetCount: Int
@@ -110,24 +108,18 @@ struct CollectionHeaderView: View {
     var body: some View {
         Button(action: onToggle) {
             HStack(spacing: 12) {
-                // Collection icon
                 CollectionIconView(icon: collectionIcon, color: collectionColor)
-                
-                // Collection info
                 CollectionInfoView(
                     title: title,
                     snippetCount: snippetCount,
                     enabledCount: enabledCount
                 )
-                
                 Spacer()
                 
-                // Preview snippets when collapsed
                 if !isExpanded && !snippetPreviews.isEmpty {
                     PreviewSnippetsView(snippets: snippetPreviews, color: collectionColor)
                 }
                 
-                // Expand/collapse indicator
                 ExpandIndicatorView(isExpanded: isExpanded)
             }
             .padding(.horizontal, 16)
@@ -146,13 +138,16 @@ struct CollectionHeaderView: View {
     }
 }
 
-// MARK: - Small Helper Views (Broken out to help compiler)
+// MARK: - Collection Icon View 100147
 struct CollectionIconView: View {
     let icon: String
     let color: Color
+    @StateObject private var snippetManager = SnippetManager.shared
     
     var body: some View {
-        Image(systemName: icon)
+        let actualIcon = icon.isEmpty ? getDefaultIcon() : icon
+        
+        Image(systemName: actualIcon)
             .font(.system(size: 14, weight: .medium))
             .foregroundColor(color)
             .frame(width: 24, height: 24)
@@ -161,8 +156,21 @@ struct CollectionIconView: View {
                     .fill(color.opacity(0.15))
             )
     }
+    
+    private func getDefaultIcon() -> String {
+        switch icon {
+        case "at": return "at"
+        case "location": return "location"
+        case "phone": return "phone"
+        case "signature": return "signature"
+        case "clock": return "clock"
+        case "number": return "number"
+        default: return "folder"
+        }
+    }
 }
 
+// MARK: - Collection Info View 100148
 struct CollectionInfoView: View {
     let title: String
     let snippetCount: Int
@@ -181,6 +189,7 @@ struct CollectionInfoView: View {
     }
 }
 
+// MARK: - Preview Snippets View 100149
 struct PreviewSnippetsView: View {
     let snippets: [Snippet]
     let color: Color
@@ -208,6 +217,7 @@ struct PreviewSnippetsView: View {
     }
 }
 
+// MARK: - Expand Indicator View 100150
 struct ExpandIndicatorView: View {
     let isExpanded: Bool
     
@@ -219,6 +229,7 @@ struct ExpandIndicatorView: View {
     }
 }
 
+// MARK: - Expanded Snippets View 100151
 struct ExpandedSnippetsView: View {
     let snippets: [Snippet]
     @Binding var editingSnippet: Snippet?

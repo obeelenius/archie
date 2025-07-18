@@ -1,4 +1,8 @@
+// SnippetManage.swift
+
 import Foundation
+
+// MARK: - Enhanced Snippet Manager with Default Collections 100101
 
 class SnippetManager: ObservableObject {
     static let shared = SnippetManager()
@@ -15,53 +19,175 @@ class SnippetManager: ObservableObject {
         }
     }
     
+    // Undo system
+    @Published var pendingDeletions: [PendingDeletion] = []
+    private var deletionTimers: [UUID: Timer] = [:]
+    
     private init() {
         loadCollections()
         loadSnippets()
-        
-        // Add default collection if none exist
+        setupDefaultCollections()
+    }
+}
+
+// MARK: - Default Collections Setup 100102
+extension SnippetManager {
+    private func setupDefaultCollections() {
+        // Only create defaults if no collections exist
         if collections.isEmpty {
-            let defaultCollection = SnippetCollection(name: "Default", suffix: "", keepDelimiter: false)
-            collections = [defaultCollection]
-        }
-        
-        // Add some default snippets if none exist
-        if snippets.isEmpty {
-            let defaultCollection = collections.first!
-            snippets = [
-                Snippet(shortcut: "@@", expansion: "your@email.com", collectionId: defaultCollection.id),
-                Snippet(shortcut: "addr", expansion: "123 Main St\nYour City, State 12345", collectionId: defaultCollection.id),
-                Snippet(shortcut: "phone", expansion: "+1 (555) 123-4567", collectionId: defaultCollection.id),
-                Snippet(shortcut: "sig", expansion: "Best regards,\nYour Name", collectionId: defaultCollection.id),
-                Snippet(shortcut: "today", expansion: "{{date}}", collectionId: defaultCollection.id),
-                Snippet(shortcut: "now", expansion: "{{time}}", collectionId: defaultCollection.id)
-            ]
+            createDefaultCollections()
         }
     }
     
+    private func createDefaultCollections() {
+        // Create default collections with icons
+        let generalCollection = SnippetCollection(name: "General", suffix: "", keepDelimiter: false, icon: "folder")
+        let signatureCollection = SnippetCollection(name: "Signature", suffix: "", keepDelimiter: false, icon: "signature")
+        let dateCollection = SnippetCollection(name: "Date", suffix: "", keepDelimiter: false, icon: "clock")
+        let contactCollection = SnippetCollection(name: "Contact", suffix: "", keepDelimiter: false, icon: "at")
+        
+        collections = [generalCollection, signatureCollection, dateCollection, contactCollection]
+        
+        createDefaultSnippets(
+            generalCollection: generalCollection,
+            signatureCollection: signatureCollection,
+            dateCollection: dateCollection,
+            contactCollection: contactCollection
+        )
+    }
+    
+    private func createDefaultSnippets(
+        generalCollection: SnippetCollection,
+        signatureCollection: SnippetCollection,
+        dateCollection: SnippetCollection,
+        contactCollection: SnippetCollection
+    ) {
+        let defaultSnippets = [
+            // Contact collection snippets
+            Snippet(shortcut: "@@", expansion: "your@email.com", collectionId: contactCollection.id),
+            Snippet(shortcut: "addr", expansion: "123 Main St\nYour City, State 12345", collectionId: contactCollection.id),
+            Snippet(shortcut: "phone", expansion: "+1 (555) 123-4567", collectionId: contactCollection.id),
+            
+            // Signature collection snippet
+            Snippet(shortcut: "sig", expansion: "Best regards,\nYour Name", collectionId: signatureCollection.id),
+            
+            // Date collection snippets
+            Snippet(shortcut: "today", expansion: "{{date}}", collectionId: dateCollection.id),
+            Snippet(shortcut: "nextweek", expansion: "{{date+7}}", collectionId: dateCollection.id)
+        ]
+        
+        snippets = defaultSnippets
+    }
+}
+
+// MARK: - Snippet Management 100103
+extension SnippetManager {
     func addSnippet(_ snippet: Snippet) {
         snippets.append(snippet)
     }
     
     func deleteSnippet(_ snippet: Snippet) {
+        // Create pending deletion
+        let pendingDeletion = PendingDeletion(
+            type: .snippet(snippet),
+            timestamp: Date()
+        )
+        pendingDeletions.append(pendingDeletion)
+        
+        // Remove from snippets immediately
         snippets.removeAll { $0.id == snippet.id }
+        
+        // Schedule auto-confirm after 3 seconds
+        scheduleAutoConfirmDeletion(pendingDeletion)
     }
-    
+}
+
+// MARK: - Collection Management 100104
+extension SnippetManager {
     func addCollection(_ collection: SnippetCollection) {
         collections.append(collection)
     }
     
     func deleteCollection(_ collection: SnippetCollection) {
-        // Move snippets to default collection
-        let defaultCollection = collections.first { $0.name == "Default" } ?? collections.first!
-        for i in snippets.indices {
-            if snippets[i].collectionId == collection.id {
-                snippets[i].collectionId = defaultCollection.id
-            }
-        }
+        // Move snippets to General collection first
+        let generalCollection = collections.first { $0.name == "General" } ?? collections.first!
+        let affectedSnippets = snippets.filter { $0.collectionId == collection.id }
+        
+        moveSnippetsToGeneralCollection(generalCollection: generalCollection, collectionId: collection.id)
+        
+        // Create pending deletion
+        let pendingDeletion = PendingDeletion(
+            type: .collection(collection, affectedSnippets),
+            timestamp: Date()
+        )
+        pendingDeletions.append(pendingDeletion)
+        
+        // Remove from collections immediately
         collections.removeAll { $0.id == collection.id }
+        
+        // Schedule auto-confirm after 3 seconds
+        scheduleAutoConfirmDeletion(pendingDeletion)
     }
     
+    private func moveSnippetsToGeneralCollection(generalCollection: SnippetCollection, collectionId: UUID) {
+        for i in snippets.indices {
+            if snippets[i].collectionId == collectionId {
+                snippets[i].collectionId = generalCollection.id
+            }
+        }
+    }
+}
+
+// MARK: - Undo System 100105
+extension SnippetManager {
+    func undoDeletion(_ pendingDeletion: PendingDeletion) {
+        // Cancel the timer
+        deletionTimers[pendingDeletion.id]?.invalidate()
+        deletionTimers.removeValue(forKey: pendingDeletion.id)
+        
+        switch pendingDeletion.type {
+        case .snippet(let snippet):
+            undoSnippetDeletion(snippet)
+        case .collection(let collection, let affectedSnippets):
+            undoCollectionDeletion(collection: collection, affectedSnippets: affectedSnippets)
+        }
+        
+        // Remove from pending deletions
+        pendingDeletions.removeAll { $0.id == pendingDeletion.id }
+    }
+    
+    private func undoSnippetDeletion(_ snippet: Snippet) {
+        snippets.append(snippet)
+    }
+    
+    private func undoCollectionDeletion(collection: SnippetCollection, affectedSnippets: [Snippet]) {
+        collections.append(collection)
+        // Restore snippets to their original collection
+        for snippet in affectedSnippets {
+            if let index = snippets.firstIndex(where: { $0.id == snippet.id }) {
+                snippets[index].collectionId = collection.id
+            }
+        }
+    }
+    
+    private func scheduleAutoConfirmDeletion(_ pendingDeletion: PendingDeletion) {
+        let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+            self.confirmDeletion(pendingDeletion)
+        }
+        deletionTimers[pendingDeletion.id] = timer
+    }
+    
+    private func confirmDeletion(_ pendingDeletion: PendingDeletion) {
+        // Remove from pending deletions and timers
+        pendingDeletions.removeAll { $0.id == pendingDeletion.id }
+        deletionTimers.removeValue(forKey: pendingDeletion.id)
+        
+        // Item is already deleted from main arrays, so permanent deletion is complete
+    }
+}
+
+// MARK: - Helper Methods 100106
+extension SnippetManager {
     func collection(for snippet: Snippet) -> SnippetCollection? {
         guard let collectionId = snippet.collectionId else { return nil }
         return collections.first { $0.id == collectionId }
@@ -85,7 +211,10 @@ class SnippetManager: ObservableObject {
         }
         return nil
     }
-    
+}
+
+// MARK: - Persistence 100107
+extension SnippetManager {
     private func saveSnippets() {
         if let data = try? JSONEncoder().encode(snippets) {
             UserDefaults.standard.set(data, forKey: "snippets")
@@ -109,6 +238,27 @@ class SnippetManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: "collections"),
            let decoded = try? JSONDecoder().decode([SnippetCollection].self, from: data) {
             collections = decoded
+        }
+    }
+}
+
+// MARK: - Pending Deletion System 100108
+struct PendingDeletion: Identifiable {
+    let id = UUID()
+    let type: DeletionType
+    let timestamp: Date
+    
+    enum DeletionType {
+        case snippet(Snippet)
+        case collection(SnippetCollection, [Snippet]) // collection and affected snippets
+    }
+    
+    var title: String {
+        switch type {
+        case .snippet(let snippet):
+            return "Deleted '\(snippet.shortcut)'"
+        case .collection(let collection, _):
+            return "Deleted '\(collection.name)' collection"
         }
     }
 }

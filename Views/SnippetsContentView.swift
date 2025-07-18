@@ -2,7 +2,7 @@
 
 import SwiftUI
 
-// MARK: - Snippets Content View
+// MARK: - Snippets Content View 100152
 struct SnippetsContentView: View {
     let filteredSnippets: [Snippet]
     @Binding var searchText: String
@@ -10,51 +10,57 @@ struct SnippetsContentView: View {
     @StateObject private var snippetManager = SnippetManager.shared
     
     var groupedSnippets: [String: [Snippet]] {
-        Dictionary(grouping: filteredSnippets, by: classifySnippet)
-    }
-    
-    private func classifySnippet(_ snippet: Snippet) -> String {
-        let shortcut = snippet.shortcut.lowercased()
-        
-        if shortcut.hasPrefix("@") { return "Email & Contacts" }
-        if shortcut.hasPrefix("#") { return "Social & Tags" }
-        if shortcut.contains("addr") || shortcut.contains("address") { return "Addresses" }
-        if shortcut.contains("phone") || shortcut.contains("tel") { return "Phone Numbers" }
-        if shortcut.contains("sig") || shortcut.contains("signature") { return "Signatures" }
-        if shortcut.contains("date") || shortcut.contains("time") || shortcut.contains("today") || shortcut.contains("now") {
-            return "Date & Time"
-        }
-        return "General"
+        Dictionary(grouping: filteredSnippets, by: getCollectionName)
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Search and stats section
-            SnippetsSearchSection(searchText: $searchText)
-            
+            searchAndStatsSection
             Divider()
-            
-            // Content area
-            if filteredSnippets.isEmpty {
-                EmptyStateView(isSearching: !searchText.isEmpty)
-            } else {
-                SnippetsListView(
-                    groupedSnippets: groupedSnippets,
-                    editingSnippet: $editingSnippet
-                )
-            }
+            contentArea
         }
+    }
+}
+
+// MARK: - Helper Methods 100153
+extension SnippetsContentView {
+    private func getCollectionName(_ snippet: Snippet) -> String {
+        guard let collectionId = snippet.collectionId,
+              let collection = snippetManager.collections.first(where: { $0.id == collectionId }) else {
+            return "General"
+        }
+        return collection.name
     }
     
     private func getCollectionIcon(for collectionName: String) -> String {
+        // For user-created collections, try to find the actual collection
+        if snippetManager.collections.first(where: { $0.name == collectionName }) != nil {
+            return "folder.badge.person.crop"
+        }
+        
+        // For the default "General" collection
         switch collectionName {
-        case "Email & Contacts": return "at"
-        case "Social & Tags": return "number"
-        case "Addresses": return "location"
-        case "Phone Numbers": return "phone"
-        case "Signatures": return "signature"
-        case "Date & Time": return "clock"
+        case "General": return "folder"
         default: return "folder"
+        }
+    }
+}
+
+// MARK: - View Components 100154
+extension SnippetsContentView {
+    private var searchAndStatsSection: some View {
+        SnippetsSearchSection(searchText: $searchText)
+    }
+    
+    @ViewBuilder
+    private var contentArea: some View {
+        if filteredSnippets.isEmpty {
+            EmptyStateView(isSearching: !searchText.isEmpty)
+        } else {
+            SnippetsListView(
+                groupedSnippets: groupedSnippets,
+                editingSnippet: $editingSnippet
+            )
         }
     }
 }
