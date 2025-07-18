@@ -504,6 +504,7 @@ struct ExpandedSnippetsView: View {
             }
         }
         .padding(.horizontal, 12)
+        .padding(.top, 8) // new
         .padding(.bottom, 12)
     }
 }

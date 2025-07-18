@@ -15,30 +15,7 @@ struct CollectionsContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Compact header
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder")
-                            .foregroundColor(.purple)
-                            .font(.system(size: 10))
-                        Text("\(snippetManager.collections.count)")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.primary)
-                        Text("collections")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            Divider()
-            
+        
             // Collections list (full width)
             if snippetManager.collections.isEmpty {
                 VStack(spacing: 24) {
