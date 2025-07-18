@@ -14,17 +14,43 @@ struct EditSnippetSlideOut: View {
     @State private var triggerMode: TriggerMode = .spaceRequiredConsume
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var initializedSnippetId: UUID? = nil
+    
+    // Get the current snippet data from the manager
+    private var currentSnippet: Snippet {
+        snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
+    }
+    
+    // Check if there are unsaved changes
+    private var hasUnsavedChanges: Bool {
+        let currentRequiresSpace = currentSnippet.requiresSpace
+        let currentKeepDelimiter = currentSnippet.keepDelimiter
+        let currentTriggerMode: TriggerMode = {
+            if !currentRequiresSpace {
+                return .instant
+            } else if currentKeepDelimiter {
+                return .spaceRequiredKeep
+            } else {
+                return .spaceRequiredConsume
+            }
+        }()
+        
+        return shortcut != currentSnippet.shortcut ||
+               expansion != currentSnippet.expansion ||
+               triggerMode != currentTriggerMode
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             headerSection
             formContent
-            footerSection
         }
         .background(Color(NSColor.windowBackgroundColor))
-        .onAppear(perform: loadSnippetData)
-        .onChange(of: snippet.id) { oldValue, newValue in
-            loadSnippetData()
+        .onAppear {
+            if initializedSnippetId != snippet.id {
+                loadSnippetData()
+                initializedSnippetId = snippet.id
+            }
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -40,7 +66,6 @@ extension EditSnippetSlideOut {
         case spaceRequiredConsume = "Space Required (Remove)"
         case spaceRequiredKeep = "Space Required (Keep)"
         case instant = "Instant"
-        case collectionSuffix = "Collection Suffix"
         
         var description: String {
             switch self {
@@ -50,8 +75,6 @@ extension EditSnippetSlideOut {
                 return "Type shortcut + space, keeps the space after expansion"
             case .instant:
                 return "Expands immediately after typing shortcut"
-            case .collectionSuffix:
-                return "Uses collection suffix like ; or .. to trigger"
             }
         }
         
@@ -63,8 +86,6 @@ extension EditSnippetSlideOut {
                 return "addr + space → 'your address ' (with trailing space)"
             case .instant:
                 return "@@ → expands immediately"
-            case .collectionSuffix:
-                return "addr; → expands (if ; is suffix)"
             }
         }
         
@@ -76,8 +97,6 @@ extension EditSnippetSlideOut {
                 return "space"
             case .instant:
                 return "bolt"
-            case .collectionSuffix:
-                return "textformat.subscript"
             }
         }
     }
@@ -99,14 +118,34 @@ extension EditSnippetSlideOut {
                 
                 Spacer()
                 
-                Button(action: { isShowing = false }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                        .padding(6)
-                        .background(Circle().fill(Color(NSColor.controlColor)))
+                HStack(spacing: 8) {
+                    Button("Cancel") {
+                        isShowing = false
+                    }
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                    .buttonStyle(.plain)
+                    
+                    Button("Save Changes") {
+                        saveChanges()
+                    }
+                    .disabled(!hasUnsavedChanges)
+                    .foregroundColor(.white)
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(!hasUnsavedChanges ? Color.gray : Color.accentColor)
+                    )
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             
             Divider()
@@ -323,58 +362,39 @@ extension EditSnippetSlideOut {
         }
 }
 
-// MARK: - Footer Section 100034
-extension EditSnippetSlideOut {
-    private var footerSection: some View {
-        VStack(spacing: 0) {
-            Divider()
-            
-            HStack(spacing: 8) {
-                Button("Cancel") {
-                    isShowing = false
-                }
-                .foregroundColor(.secondary)
-                .font(.system(size: 12))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
-                .buttonStyle(.plain)
-                
-                Spacer()
-                
-                Button("Save Changes") {
-                    saveChanges()
-                }
-                .disabled(expansion.isEmpty)
-                .foregroundColor(.white)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(expansion.isEmpty ? Color.gray : Color.accentColor)
-                )
-                .buttonStyle(.plain)
-            }
-            .padding(12)
-            .background(Color(NSColor.windowBackgroundColor))
-        }
-    }
-}
-
 // MARK: - Helper Methods 100035
 extension EditSnippetSlideOut {
     private func loadSnippetData() {
-        shortcut = snippet.shortcut
-        expansion = snippet.expansion
-        triggerMode = snippet.requiresSpace ? .spaceRequiredConsume : .instant
+        print("DEBUG EDIT: Loading data for snippet '\(currentSnippet.shortcut)'")
+        print("DEBUG EDIT: Current requiresSpace: \(currentSnippet.requiresSpace)")
+        print("DEBUG EDIT: Current keepDelimiter: \(currentSnippet.keepDelimiter)")
+        
+        shortcut = currentSnippet.shortcut
+        expansion = currentSnippet.expansion
+        
+        // Determine trigger mode based on both requiresSpace and keepDelimiter
+        if !currentSnippet.requiresSpace {
+            triggerMode = .instant
+        } else if currentSnippet.keepDelimiter {
+            triggerMode = .spaceRequiredKeep
+        } else {
+            triggerMode = .spaceRequiredConsume
+        }
+        
+        print("DEBUG EDIT: Set triggerMode to: \(triggerMode)")
     }
     
     private func saveChanges() {
         let finalShortcut = shortcut.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        print("DEBUG EDIT: Saving changes for snippet '\(finalShortcut)'")
+        print("DEBUG EDIT: Current triggerMode: \(triggerMode)")
+        
+        let newRequiresSpace = (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep)
+        let newKeepDelimiter = (triggerMode == .spaceRequiredKeep)
+        
+        print("DEBUG EDIT: Will set requiresSpace to: \(newRequiresSpace)")
+        print("DEBUG EDIT: Will set keepDelimiter to: \(newKeepDelimiter)")
         
         if snippetManager.snippets.contains(where: { $0.shortcut == finalShortcut && $0.id != snippet.id }) {
             errorMessage = "A snippet with this shortcut already exists."
@@ -383,9 +403,20 @@ extension EditSnippetSlideOut {
         }
         
         if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
+            print("DEBUG EDIT: Found snippet at index \(index)")
+            print("DEBUG EDIT: Before save - requiresSpace: \(snippetManager.snippets[index].requiresSpace), keepDelimiter: \(snippetManager.snippets[index].keepDelimiter)")
+            
             snippetManager.snippets[index].shortcut = finalShortcut
             snippetManager.snippets[index].expansion = expansion
-            snippetManager.snippets[index].requiresSpace = (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep)
+            snippetManager.snippets[index].requiresSpace = newRequiresSpace
+            snippetManager.snippets[index].keepDelimiter = newKeepDelimiter
+            
+            print("DEBUG EDIT: After save - requiresSpace: \(snippetManager.snippets[index].requiresSpace), keepDelimiter: \(snippetManager.snippets[index].keepDelimiter)")
+            
+            // Trigger save notification
+            SaveNotificationManager.shared.show("Snippet updated")
+        } else {
+            print("DEBUG EDIT: ERROR - Could not find snippet to update!")
         }
         
         isShowing = false
@@ -658,19 +689,6 @@ struct EditTriggerModeRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 12) {
-                // Selection indicator
-                ZStack {
-                    Circle()
-                        .stroke(Color.accentColor, lineWidth: 2)
-                        .frame(width: 16, height: 16)
-                    
-                    if isSelected {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                
                 // Mode icon
                 Image(systemName: mode.icon)
                     .font(.system(size: 12, weight: .medium))

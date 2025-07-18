@@ -9,6 +9,21 @@ struct SettingsHeaderView: View {
     @Binding var showingAddCollectionSheet: Bool
     @Binding var editingSnippet: Snippet?
     @Binding var editingCollection: SnippetCollection?
+    let onAddSnippetTapped: (() -> Void)?
+    
+    init(selectedView: Binding<SettingsView.MainView>,
+         showingAddSheet: Binding<Bool>,
+         showingAddCollectionSheet: Binding<Bool>,
+         editingSnippet: Binding<Snippet?>,
+         editingCollection: Binding<SnippetCollection?>,
+         onAddSnippetTapped: (() -> Void)? = nil) {
+        self._selectedView = selectedView
+        self._showingAddSheet = showingAddSheet
+        self._showingAddCollectionSheet = showingAddCollectionSheet
+        self._editingSnippet = editingSnippet
+        self._editingCollection = editingCollection
+        self.onAddSnippetTapped = onAddSnippetTapped
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -73,15 +88,21 @@ extension SettingsHeaderView {
 extension SettingsHeaderView {
     private var contextAwareAddButton: some View {
         Button(action: {
-            // Close any open editors first
-            editingSnippet = nil
-            editingCollection = nil
-            
-            // Then open the appropriate add sheet
             if selectedView == .collections {
+                // Close any open editors first
+                editingSnippet = nil
+                editingCollection = nil
                 showingAddCollectionSheet = true
             } else {
-                showingAddSheet = true
+                // Use the custom handler if provided (for snippet view)
+                if let handler = onAddSnippetTapped {
+                    handler()
+                } else {
+                    // Default behavior
+                    editingSnippet = nil
+                    editingCollection = nil
+                    showingAddSheet = true
+                }
             }
         }) {
             HStack(spacing: 6) {
@@ -95,7 +116,7 @@ extension SettingsHeaderView {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.accentColor)
+                    .fill(selectedView == .collections ? Color.purple : Color.accentColor)
             )
         }
         .buttonStyle(.plain)

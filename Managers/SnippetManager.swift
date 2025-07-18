@@ -27,6 +27,7 @@ class SnippetManager: ObservableObject {
         loadCollections()
         loadSnippets()
         setupDefaultCollections()
+        fixOrphanedSnippets() // Fix any snippets without collectionId
     }
 }
 
@@ -191,12 +192,21 @@ extension SnippetManager {
 // MARK: - Helper Methods 100106
 extension SnippetManager {
     func collection(for snippet: Snippet) -> SnippetCollection? {
-        guard let collectionId = snippet.collectionId else { return nil }
-        return collections.first { $0.id == collectionId }
+        guard let collectionId = snippet.collectionId else {
+            print("DEBUG: Snippet '\(snippet.shortcut)' has nil collectionId")
+            return nil
+        }
+        let collection = collections.first { $0.id == collectionId }
+        if collection == nil {
+            print("DEBUG: Snippet '\(snippet.shortcut)' has collectionId '\(collectionId)' but no matching collection found")
+        }
+        return collection
     }
     
     func snippets(for collection: SnippetCollection) -> [Snippet] {
-        return snippets.filter { $0.collectionId == collection.id }
+        let collectionSnippets = snippets.filter { $0.collectionId == collection.id }
+        print("DEBUG: Collection '\(collection.name)' has \(collectionSnippets.count) snippets")
+        return collectionSnippets
     }
     
     func getExpansion(for shortcut: String) -> String? {
@@ -212,6 +222,19 @@ extension SnippetManager {
             }
         }
         return nil
+    }
+    
+    // Add a method to fix orphaned snippets
+    func fixOrphanedSnippets() {
+        let generalCollection = collections.first { $0.name == "General" }
+        guard let generalCollection = generalCollection else { return }
+        
+        for i in snippets.indices {
+            if snippets[i].collectionId == nil {
+                print("DEBUG: Fixing orphaned snippet '\(snippets[i].shortcut)' - assigning to General collection")
+                snippets[i].collectionId = generalCollection.id
+            }
+        }
     }
 }
 

@@ -37,9 +37,14 @@ struct SnippetCardView: View {
             isHovered = hovering
         }
         .onDrag {
-            isDragging = true
-            return NSItemProvider(object: SnippetDragData(snippet: currentSnippet))
-        }
+                    isDragging = true
+                    print("DEBUG DRAG: Starting drag for snippet '\(currentSnippet.shortcut)' (ID: \(currentSnippet.id.uuidString))")
+                    
+                    let dragData = SnippetDragData(snippet: currentSnippet)
+                    print("DEBUG DRAG: Created drag data for snippet")
+                    
+                    return NSItemProvider(object: dragData)
+                }
     }
 }
 
@@ -213,13 +218,8 @@ extension SnippetCardView {
 // MARK: - Card Tap Handling 100140
 extension SnippetCardView {
     private func handleCardTap() {
-        if isBeingEdited {
-            // If this card is being edited, close the editor
-            editingSnippet = nil
-        } else {
-            // If another card is being edited or no card is being edited, open this card for editing
-            editingSnippet = snippet
-        }
+        // Always set this card as the editing snippet (discarding any unsaved changes)
+        editingSnippet = snippet
     }
 }
 

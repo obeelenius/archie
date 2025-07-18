@@ -7,7 +7,16 @@ import UniformTypeIdentifiers
 struct SnippetsListView: View {
     let groupedSnippets: [String: [Snippet]]
     @Binding var editingSnippet: Snippet?
+    let onCollectionHeaderTapped: (() -> Void)?
     @State private var expandedCollections: Set<String> = []
+    
+    init(groupedSnippets: [String: [Snippet]],
+         editingSnippet: Binding<Snippet?>,
+         onCollectionHeaderTapped: (() -> Void)? = nil) {
+        self.groupedSnippets = groupedSnippets
+        self._editingSnippet = editingSnippet
+        self.onCollectionHeaderTapped = onCollectionHeaderTapped
+    }
     
     var sortedGroups: [(String, [Snippet])] {
         groupedSnippets.sorted { $0.key < $1.key }
@@ -24,7 +33,8 @@ struct SnippetsListView: View {
                         editingSnippet: $editingSnippet,
                         onToggle: {
                             toggleCollection(collectionData.0)
-                        }
+                        },
+                        onHeaderTapped: onCollectionHeaderTapped
                     )
                 }
             }
@@ -55,6 +65,21 @@ struct CollectionSectionView: View {
     let isExpanded: Bool
     @Binding var editingSnippet: Snippet?
     let onToggle: () -> Void
+    let onHeaderTapped: (() -> Void)?
+    
+    init(collectionName: String,
+         snippets: [Snippet],
+         isExpanded: Bool,
+         editingSnippet: Binding<Snippet?>,
+         onToggle: @escaping () -> Void,
+         onHeaderTapped: (() -> Void)? = nil) {
+        self.collectionName = collectionName
+        self.snippets = snippets
+        self.isExpanded = isExpanded
+        self._editingSnippet = editingSnippet
+        self.onToggle = onToggle
+        self.onHeaderTapped = onHeaderTapped
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -64,7 +89,8 @@ struct CollectionSectionView: View {
                 enabledCount: snippets.filter(\.isEnabled).count,
                 isExpanded: isExpanded,
                 snippetPreviews: Array(snippets.prefix(3)),
-                onToggle: onToggle
+                onToggle: onToggle,
+                onHeaderTapped: onHeaderTapped
             )
             
             if isExpanded {
@@ -85,8 +111,25 @@ struct CollectionHeaderView: View {
     let isExpanded: Bool
     let snippetPreviews: [Snippet]
     let onToggle: () -> Void
+    let onHeaderTapped: (() -> Void)?
     @StateObject private var snippetManager = SnippetManager.shared
     @State private var isDropTarget = false
+    
+    init(title: String,
+         snippetCount: Int,
+         enabledCount: Int,
+         isExpanded: Bool,
+         snippetPreviews: [Snippet],
+         onToggle: @escaping () -> Void,
+         onHeaderTapped: (() -> Void)? = nil) {
+        self.title = title
+        self.snippetCount = snippetCount
+        self.enabledCount = enabledCount
+        self.isExpanded = isExpanded
+        self.snippetPreviews = snippetPreviews
+        self.onToggle = onToggle
+        self.onHeaderTapped = onHeaderTapped
+    }
     
     var collection: SnippetCollection? {
         snippetManager.collections.first { $0.name == title }
@@ -153,7 +196,13 @@ struct CollectionHeaderView: View {
     }
     
     var body: some View {
-        Button(action: onToggle) {
+        Button(action: {
+            // Call the header tapped callback if provided, otherwise just toggle
+            if let headerTapped = onHeaderTapped {
+                headerTapped()
+            }
+            onToggle()
+        }) {
             HStack(spacing: 12) {
                 // Left side: Icon and info
                 HStack(spacing: 10) {

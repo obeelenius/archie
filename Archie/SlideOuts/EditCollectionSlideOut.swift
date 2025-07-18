@@ -16,6 +16,22 @@ struct EditCollectionSlideOut: View {
     @State private var selectedColor = "blue"
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var loadedCollectionId: UUID? = nil
+    
+    // Get the current collection data from the manager
+    private var currentCollection: SnippetCollection {
+        snippetManager.collections.first { $0.id == collection.id } ?? collection
+    }
+    
+    // Check if there are unsaved changes
+    private var hasUnsavedChanges: Bool {
+        return name != currentCollection.name ||
+               suffix != currentCollection.suffix ||
+               keepDelimiter != currentCollection.keepDelimiter ||
+               isEnabled != currentCollection.isEnabled ||
+               selectedIcon != currentCollection.icon ||
+               selectedColor != currentCollection.color
+    }
     
     private let availableIcons = [
         CollectionIcon(name: "folder", category: "General"),
@@ -67,17 +83,16 @@ struct EditCollectionSlideOut: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header section
             headerSection
-            
-            // Form content
             formContent
-            
-            // Footer with buttons
-            footerSection
         }
         .background(Color(NSColor.windowBackgroundColor))
-        .onAppear(perform: loadCollectionData)
+        .onAppear {
+            loadCollectionDataIfNeeded()
+        }
+        .onChange(of: collection.id) { oldValue, newValue in
+            loadCollectionDataIfNeeded()
+        }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
         } message: {
@@ -102,14 +117,34 @@ extension EditCollectionSlideOut {
                 
                 Spacer()
                 
-                Button(action: { isShowing = false }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                        .padding(6)
-                        .background(Circle().fill(Color(NSColor.controlColor)))
+                HStack(spacing: 8) {
+                    Button("Cancel") {
+                        isShowing = false
+                    }
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                    .buttonStyle(.plain)
+                    
+                    Button("Save Changes") {
+                        saveChanges()
+                    }
+                    .disabled(!hasUnsavedChanges)
+                    .foregroundColor(.white)
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(!hasUnsavedChanges ? Color.gray : Color.accentColor)
+                    )
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             
             Divider()
@@ -125,7 +160,6 @@ extension EditCollectionSlideOut {
     private var formContent: some View {
         ScrollView {
             VStack(spacing: 16) {
-                collectionStatusSection
                 collectionNameSection
                 iconSelectionSection
                 colorSelectionSection
@@ -392,57 +426,27 @@ extension EditCollectionSlideOut {
     }
 }
 
-// MARK: - Footer Section 100022
-extension EditCollectionSlideOut {
-    private var footerSection: some View {
-        VStack(spacing: 0) {
-            Divider()
-            
-            HStack(spacing: 8) {
-                Button("Cancel") {
-                    isShowing = false
-                }
-                .foregroundColor(.secondary)
-                .font(.system(size: 12))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
-                .buttonStyle(.plain)
-                
-                Spacer()
-                
-                Button("Save Changes") {
-                    saveChanges()
-                }
-                .disabled(name.isEmpty)
-                .foregroundColor(.white)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(name.isEmpty ? Color.gray : Color.accentColor)
-                )
-                .buttonStyle(.plain)
-            }
-            .padding(12)
-            .background(Color(NSColor.windowBackgroundColor))
-        }
-    }
-}
-
 // MARK: - Helper Methods 100023
 extension EditCollectionSlideOut {
+    private func loadCollectionDataIfNeeded() {
+        // Only load if we haven't loaded this collection yet or if the collection changed
+        if loadedCollectionId != collection.id {
+            loadCollectionData()
+            loadedCollectionId = collection.id
+        }
+    }
+    
     private func loadCollectionData() {
-        name = collection.name
-        suffix = collection.suffix
-        keepDelimiter = collection.keepDelimiter
-        isEnabled = collection.isEnabled
-        selectedIcon = collection.icon
-        selectedColor = collection.color
+        print("DEBUG EDIT COLLECTION: Loading data for collection '\(currentCollection.name)' (ID: \(currentCollection.id.uuidString))")
+        
+        name = currentCollection.name
+        suffix = currentCollection.suffix
+        keepDelimiter = currentCollection.keepDelimiter
+        isEnabled = currentCollection.isEnabled
+        selectedIcon = currentCollection.icon
+        selectedColor = currentCollection.color
+        
+        print("DEBUG EDIT COLLECTION: Loaded - name: '\(name)', icon: '\(selectedIcon)', color: '\(selectedColor)'")
     }
     
     private func getDefaultIcon(for name: String) -> String {
@@ -480,6 +484,10 @@ extension EditCollectionSlideOut {
     private func saveChanges() {
         let finalName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         
+        print("DEBUG EDIT COLLECTION: Saving changes for collection ID: \(collection.id.uuidString)")
+        print("DEBUG EDIT COLLECTION: Final name: '\(finalName)'")
+        
+        // Check for name conflicts with OTHER collections (exclude current collection)
         if snippetManager.collections.contains(where: { $0.name == finalName && $0.id != collection.id }) {
             errorMessage = "A collection with this name already exists."
             showingError = true
@@ -487,12 +495,22 @@ extension EditCollectionSlideOut {
         }
         
         if let index = snippetManager.collections.firstIndex(where: { $0.id == collection.id }) {
+            print("DEBUG EDIT COLLECTION: Found collection at index \(index)")
+            print("DEBUG EDIT COLLECTION: Before save - name: '\(snippetManager.collections[index].name)'")
+            
             snippetManager.collections[index].name = finalName
             snippetManager.collections[index].suffix = suffix
             snippetManager.collections[index].keepDelimiter = keepDelimiter
             snippetManager.collections[index].isEnabled = isEnabled
             snippetManager.collections[index].icon = selectedIcon
             snippetManager.collections[index].color = selectedColor
+            
+            print("DEBUG EDIT COLLECTION: After save - name: '\(snippetManager.collections[index].name)'")
+            
+            // Trigger save notification
+            SaveNotificationManager.shared.show("Collection updated")
+        } else {
+            print("DEBUG EDIT COLLECTION: ERROR - Could not find collection with ID: \(collection.id.uuidString)")
         }
         
         isShowing = false

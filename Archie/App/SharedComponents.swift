@@ -131,8 +131,12 @@ struct CompactToggleStyle: ToggleStyle {
             configuration.label
             
             RoundedRectangle(cornerRadius: 8)
-                .fill(configuration.isOn ? Color.green : Color(NSColor.controlColor))
+                .fill(configuration.isOn ? Color.green : Color.gray.opacity(0.4))
                 .frame(width: 32, height: 18)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(configuration.isOn ? Color.clear : Color.gray.opacity(0.6), lineWidth: 1)
+                )
                 .overlay(toggleThumb(configuration))
                 .onTapGesture {
                     configuration.isOn.toggle()
@@ -144,8 +148,38 @@ struct CompactToggleStyle: ToggleStyle {
         Circle()
             .fill(Color.white)
             .frame(width: 14, height: 14)
-            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 0.5)
+            .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
             .offset(x: configuration.isOn ? 7 : -7)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
+    }
+}
+
+// MARK: - Modern Toggle Style 100088
+struct ModernToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack {
+            configuration.label
+            
+            RoundedRectangle(cornerRadius: 12)
+                .fill(configuration.isOn ? Color.green : Color.gray.opacity(0.4))
+                .frame(width: 44, height: 24)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(configuration.isOn ? Color.clear : Color.gray.opacity(0.6), lineWidth: 1)
+                )
+                .overlay(modernToggleThumb(configuration))
+                .onTapGesture {
+                    configuration.isOn.toggle()
+                }
+        }
+    }
+    
+    private func modernToggleThumb(_ configuration: Configuration) -> some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: 20, height: 20)
+            .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 1.5)
+            .offset(x: configuration.isOn ? 10 : -10)
             .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
     }
 }
@@ -362,29 +396,39 @@ struct CollectionCard: View {
     }
     
     private var collectionActions: some View {
-        HStack(spacing: 8) {
-            Button("Edit") {
-                editingCollection = currentCollection
-            }
-            .font(.system(size: 12))
-            .foregroundColor(.accentColor)
-            .buttonStyle(.plain)
-            
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isExpanded.toggle()
+            HStack(spacing: 8) {
+                Toggle("", isOn: Binding(
+                    get: { currentCollection.isEnabled },
+                    set: { newValue in
+                        if let index = snippetManager.collections.firstIndex(where: { $0.id == collection.id }) {
+                            snippetManager.collections[index].isEnabled = newValue
+                        }
+                    }
+                ))
+                .toggleStyle(CompactToggleStyle())
+                
+                Button("Edit") {
+                    editingCollection = currentCollection
                 }
-            }) {
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12))
+                .foregroundColor(.accentColor)
+                .buttonStyle(.plain)
+                
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isExpanded.toggle()
+                    }
+                }) {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
-    }
     
     private func handleCardTap() {
-        // Always open editor for the clicked collection
+        // Always set this collection as the editing collection (discarding any unsaved changes)
         editingCollection = currentCollection
     }
     

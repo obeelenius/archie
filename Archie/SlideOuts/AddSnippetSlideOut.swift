@@ -18,7 +18,6 @@ struct AddSnippetSlideOut: View {
         VStack(spacing: 0) {
             headerSection
             formContent
-            footerSection
         }
         .background(Color(NSColor.windowBackgroundColor))
         .alert("Error", isPresented: $showingError) {
@@ -35,7 +34,6 @@ extension AddSnippetSlideOut {
         case spaceRequiredConsume = "Space Required (Remove)"
         case spaceRequiredKeep = "Space Required (Keep)"
         case instant = "Instant"
-        case collectionSuffix = "Collection Suffix"
         
         var description: String {
             switch self {
@@ -45,8 +43,6 @@ extension AddSnippetSlideOut {
                 return "Type shortcut + space, keeps the space after expansion"
             case .instant:
                 return "Expands immediately after typing shortcut"
-            case .collectionSuffix:
-                return "Uses collection suffix like ; or .. to trigger"
             }
         }
         
@@ -58,8 +54,6 @@ extension AddSnippetSlideOut {
                 return "addr + space → 'your address ' (with trailing space)"
             case .instant:
                 return "@@ → expands immediately"
-            case .collectionSuffix:
-                return "addr; → expands (if ; is suffix)"
             }
         }
         
@@ -71,8 +65,6 @@ extension AddSnippetSlideOut {
                 return "space"
             case .instant:
                 return "bolt"
-            case .collectionSuffix:
-                return "textformat.subscript"
             }
         }
     }
@@ -94,14 +86,34 @@ extension AddSnippetSlideOut {
                 
                 Spacer()
                 
-                Button(action: { isShowing = false }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                        .padding(6)
-                        .background(Circle().fill(Color(NSColor.controlColor)))
+                HStack(spacing: 8) {
+                    Button("Cancel") {
+                        isShowing = false
+                    }
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                    .buttonStyle(.plain)
+                    
+                    Button("Create") {
+                        saveSnippet()
+                    }
+                    .disabled(shortcut.isEmpty || expansion.isEmpty)
+                    .foregroundColor(.white)
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill((shortcut.isEmpty || expansion.isEmpty) ? Color.gray : Color.accentColor)
+                    )
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             
             Divider()
@@ -116,29 +128,31 @@ extension AddSnippetSlideOut {
 extension AddSnippetSlideOut {
     private var formContent: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
+                collectionSelectionSection
+                snippetDetailsSection
                 triggerBehaviorSection
-                shortcutSection
                 expansionSection
                 tipsSection
             }
             .padding(16)
         }
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+        .background(Color.accentColor.opacity(0.02))
     }
 }
 
 // MARK: - Trigger Behavior Section 100059
 extension AddSnippetSlideOut {
     private var triggerBehaviorSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 6) {
                 Image(systemName: "keyboard.badge.ellipsis")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                 
                 Text("Trigger Behavior")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
             }
             
             VStack(spacing: 8) {
@@ -150,12 +164,65 @@ extension AddSnippetSlideOut {
                     )
                 }
             }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+    }
+}
+
+// MARK: - Expansion Section 100061
+extension AddSnippetSlideOut {
+    private var expansionSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.alignleft")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 14))
+                
+                Text("Expansion")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                expansionEditor
+                
+                Text("Supports line breaks and variables")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                
+                enhancedVariablesSection
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+    }
+    
+    private var expansionEditor: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.textBackgroundColor))
+                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                .frame(minHeight: 100)
+            
+            TextEditor(text: $expansion)
+                .font(.system(.body, design: .monospaced))
+                .padding(6)
+                .scrollContentBackground(.hidden)
+            
+            if expansion.isEmpty {
+                Text("Replacement text...")
+                    .foregroundColor(.secondary)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(10)
+                    .allowsHitTesting(false)
+            }
         }
     }
 }
@@ -355,48 +422,6 @@ extension AddSnippetSlideOut {
     }
 }
 
-// MARK: - Footer Section 100064
-extension AddSnippetSlideOut {
-    private var footerSection: some View {
-        VStack(spacing: 0) {
-            Divider()
-            
-            HStack(spacing: 8) {
-                Button("Cancel") {
-                    isShowing = false
-                }
-                .foregroundColor(.secondary)
-                .font(.system(size: 12))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
-                .buttonStyle(.plain)
-                
-                Spacer()
-                
-                Button("Create") {
-                    saveSnippet()
-                }
-                .disabled(shortcut.isEmpty || expansion.isEmpty)
-                .foregroundColor(.white)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(shortcut.isEmpty || expansion.isEmpty ? Color.gray : Color.accentColor)
-                )
-                .buttonStyle(.plain)
-            }
-            .padding(12)
-            .background(Color(NSColor.windowBackgroundColor))
-        }
-    }
-}
-
 // MARK: - Helper Methods 100065
 extension AddSnippetSlideOut {
     private func saveSnippet() {
@@ -406,10 +431,15 @@ extension AddSnippetSlideOut {
             return
         }
         
+        // Find the General collection (or first collection as fallback)
+        let generalCollection = snippetManager.collections.first { $0.name == "General" } ?? snippetManager.collections.first
+        
         let newSnippet = Snippet(
             shortcut: shortcut.trimmingCharacters(in: .whitespacesAndNewlines),
             expansion: expansion,
-            requiresSpace: (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep)
+            requiresSpace: (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep),
+            keepDelimiter: (triggerMode == .spaceRequiredKeep),
+            collectionId: generalCollection?.id
         )
         
         snippetManager.addSnippet(newSnippet)
@@ -662,19 +692,6 @@ struct AddTriggerModeRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 12) {
-                // Selection indicator
-                ZStack {
-                    Circle()
-                        .stroke(Color.accentColor, lineWidth: 2)
-                        .frame(width: 16, height: 16)
-                    
-                    if isSelected {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                
                 // Mode icon
                 Image(systemName: mode.icon)
                     .font(.system(size: 12, weight: .medium))
@@ -769,5 +786,140 @@ struct AddFlowResult {
         }
         
         bounds = CGSize(width: rect.width, height: currentY + lineHeight)
+    }
+}
+
+
+// MARK: - Collection Selection Section 100073
+extension AddSnippetSlideOut {
+    private var collectionSelectionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "folder")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 14))
+                
+                Text("Collection")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            
+            Menu {
+                ForEach(snippetManager.collections) { collection in
+                    Button(action: {
+                        selectedCollectionId = collection.id
+                    }) {
+                        HStack {
+                            Image(systemName: collection.icon.isEmpty ? "folder" : collection.icon)
+                            Text(collection.name)
+                            if selectedCollectionId == collection.id {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    if let selectedCollection = snippetManager.collections.first(where: { $0.id == selectedCollectionId }) {
+                        Image(systemName: selectedCollection.icon.isEmpty ? "folder" : selectedCollection.icon)
+                            .foregroundColor(getCollectionColor(selectedCollection))
+                            .font(.system(size: 12))
+                        
+                        Text(selectedCollection.name)
+                            .font(.system(size: 12))
+                            .foregroundColor(.primary)
+                    } else {
+                        Text("Select Collection")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(NSColor.textBackgroundColor))
+                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            
+            Text("Choose which collection this snippet belongs to")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+    }
+    
+    private var snippetDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 6) {
+                Image(systemName: "keyboard")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 14))
+                
+                Text("Snippet Details")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shortcut")
+                        .font(.system(size: 13, weight: .semibold))
+                    
+                    TextField("e.g., 'addr', '@@'", text: $shortcut)
+                        .textFieldStyle(.plain)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(NSColor.textBackgroundColor))
+                                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        )
+                    
+                    Text("Type + space to expand")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+    }
+    
+    private func getCollectionColor(_ collection: SnippetCollection) -> Color {
+        switch collection.color {
+        case "blue": return .blue
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        case "purple": return .purple
+        case "pink": return .pink
+        case "yellow": return .yellow
+        case "indigo": return .indigo
+        case "teal": return .teal
+        case "mint": return .mint
+        case "cyan": return .cyan
+        case "brown": return .brown
+        case "gray": return .gray
+        case "black": return .black
+        case "white": return Color.white
+        case "accentColor": return .accentColor
+        default: return .blue
+        }
     }
 }
