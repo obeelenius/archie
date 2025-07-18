@@ -91,6 +91,18 @@ extension Snippet {
         compactDateFormatter.dateFormat = "yyyyMMdd"
         processed = processed.replacingOccurrences(of: "{{date-compact}}", with: compactDateFormatter.string(from: now))
         
+        // Process date components
+        processed = processDateComponents(processed, with: now)
+        
+        // Process time variables
+        processed = processTimeVariables(processed, with: now)
+        
+        // Process relative dates
+        processed = processRelativeDates(processed, with: now, calendar: calendar)
+        
+        // Process technical formats
+        processed = processTechnicalFormats(processed, with: now)
+        
         return processed
     }
 }
@@ -100,10 +112,15 @@ extension Snippet {
     private func processDateComponents(_ processed: String, with now: Date) -> String {
         var result = processed
         
-        // Day number
+        // Day number (padded)
         let dayFormatter = DateFormatter()
-        dayFormatter.dateFormat = "d"
+        dayFormatter.dateFormat = "dd"
         result = result.replacingOccurrences(of: "{{day}}", with: dayFormatter.string(from: now))
+        
+        // Day number (short)
+        let dayShortFormatter = DateFormatter()
+        dayShortFormatter.dateFormat = "d"
+        result = result.replacingOccurrences(of: "{{day-short}}", with: dayShortFormatter.string(from: now))
         
         // Day name (full)
         let dayNameFormatter = DateFormatter()
@@ -111,14 +128,19 @@ extension Snippet {
         result = result.replacingOccurrences(of: "{{day-name}}", with: dayNameFormatter.string(from: now))
         
         // Day name (short)
-        let dayShortFormatter = DateFormatter()
-        dayShortFormatter.dateFormat = "EEE"
-        result = result.replacingOccurrences(of: "{{day-short}}", with: dayShortFormatter.string(from: now))
+        let dayShortNameFormatter = DateFormatter()
+        dayShortNameFormatter.dateFormat = "EEE"
+        result = result.replacingOccurrences(of: "{{day-short-name}}", with: dayShortNameFormatter.string(from: now))
         
-        // Month number
+        // Month number (padded)
         let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "M"
+        monthFormatter.dateFormat = "MM"
         result = result.replacingOccurrences(of: "{{month}}", with: monthFormatter.string(from: now))
+        
+        // Month number (short)
+        let monthShortFormatter = DateFormatter()
+        monthShortFormatter.dateFormat = "M"
+        result = result.replacingOccurrences(of: "{{month-short}}", with: monthShortFormatter.string(from: now))
         
         // Month name (full)
         let monthNameFormatter = DateFormatter()
@@ -126,9 +148,9 @@ extension Snippet {
         result = result.replacingOccurrences(of: "{{month-name}}", with: monthNameFormatter.string(from: now))
         
         // Month name (short)
-        let monthShortFormatter = DateFormatter()
-        monthShortFormatter.dateFormat = "MMM"
-        result = result.replacingOccurrences(of: "{{month-short}}", with: monthShortFormatter.string(from: now))
+        let monthShortNameFormatter = DateFormatter()
+        monthShortNameFormatter.dateFormat = "MMM"
+        result = result.replacingOccurrences(of: "{{month-short-name}}", with: monthShortNameFormatter.string(from: now))
         
         // Year (full)
         let yearFormatter = DateFormatter()

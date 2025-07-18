@@ -301,9 +301,19 @@ struct CollectionCard: View {
     let snippets: [Snippet]
     @Binding var editingCollection: SnippetCollection?
     @State private var isExpanded = false
+    @StateObject private var snippetManager = SnippetManager.shared
     
     var enabledCount: Int {
         snippets.filter(\.isEnabled).count
+    }
+    
+    // Get the current collection data from the manager to reflect any changes
+    var currentCollection: SnippetCollection {
+        snippetManager.collections.first { $0.id == collection.id } ?? collection
+    }
+    
+    var isBeingEdited: Bool {
+        editingCollection?.id == collection.id
     }
     
     var body: some View {
@@ -314,6 +324,10 @@ struct CollectionCard: View {
         }
         .padding(12)
         .background(cardBackground)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            handleCardTap()
+        }
     }
     
     private var collectionHeader: some View {
@@ -330,14 +344,14 @@ struct CollectionCard: View {
     }
     
     private var collectionIcon: some View {
-        Image(systemName: collection.icon.isEmpty ? "folder" : collection.icon)
-            .foregroundColor(.accentColor)
+        Image(systemName: currentCollection.icon.isEmpty ? "folder" : currentCollection.icon)
+            .foregroundColor(getColor(from: currentCollection.color))
             .font(.system(size: 16))
     }
     
     private var collectionInfo: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(collection.name)
+            Text(currentCollection.name)
                 .font(.headline)
                 .fontWeight(.semibold)
             
@@ -350,7 +364,7 @@ struct CollectionCard: View {
     private var collectionActions: some View {
         HStack(spacing: 8) {
             Button("Edit") {
-                editingCollection = collection
+                editingCollection = currentCollection
             }
             .font(.system(size: 12))
             .foregroundColor(.accentColor)
@@ -367,6 +381,11 @@ struct CollectionCard: View {
             }
             .buttonStyle(.plain)
         }
+    }
+    
+    private func handleCardTap() {
+        // Always open editor for the clicked collection
+        editingCollection = currentCollection
     }
     
     @ViewBuilder
@@ -395,9 +414,9 @@ struct CollectionCard: View {
             .padding(.vertical, 2)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.accentColor.opacity(0.1))
+                    .fill(getColor(from: currentCollection.color).opacity(0.1))
             )
-            .foregroundColor(.accentColor)
+            .foregroundColor(getColor(from: currentCollection.color))
     }
     
     @ViewBuilder
@@ -420,9 +439,9 @@ struct CollectionCard: View {
                 .padding(.vertical, 4)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.accentColor.opacity(0.1))
+                        .fill(getColor(from: currentCollection.color).opacity(0.1))
                 )
-                .foregroundColor(.accentColor)
+                .foregroundColor(getColor(from: currentCollection.color))
             
             Image(systemName: "arrow.right")
                 .foregroundColor(.secondary)
@@ -448,6 +467,34 @@ struct CollectionCard: View {
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 8)
             .fill(Color(NSColor.controlBackgroundColor))
-            .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
+            .stroke(isBeingEdited ? getColor(from: currentCollection.color).opacity(0.5) : Color(NSColor.separatorColor).opacity(0.3), lineWidth: isBeingEdited ? 2 : 1)
+            .shadow(
+                color: isBeingEdited ? getColor(from: currentCollection.color).opacity(0.2) : Color.black.opacity(0.05),
+                radius: isBeingEdited ? 6 : 2,
+                x: 0,
+                y: isBeingEdited ? 3 : 1
+            )
+    }
+    
+    private func getColor(from colorName: String) -> Color {
+        switch colorName {
+        case "blue": return .blue
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        case "purple": return .purple
+        case "pink": return .pink
+        case "yellow": return .yellow
+        case "indigo": return .indigo
+        case "teal": return .teal
+        case "mint": return .mint
+        case "cyan": return .cyan
+        case "brown": return .brown
+        case "gray": return .gray
+        case "black": return .black
+        case "white": return Color.white
+        case "accentColor": return .accentColor
+        default: return .blue
+        }
     }
 }

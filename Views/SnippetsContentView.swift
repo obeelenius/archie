@@ -33,16 +33,10 @@ extension SnippetsContentView {
     }
     
     private func getCollectionIcon(for collectionName: String) -> String {
-        // For user-created collections, try to find the actual collection
-        if snippetManager.collections.first(where: { $0.name == collectionName }) != nil {
-            return "folder.badge.person.crop"
+        if let collection = snippetManager.collections.first(where: { $0.name == collectionName }) {
+            return collection.icon.isEmpty ? "folder" : collection.icon
         }
-        
-        // For the default "General" collection
-        switch collectionName {
-        case "General": return "folder"
-        default: return "folder"
-        }
+        return "folder"
     }
 }
 

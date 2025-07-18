@@ -7,6 +7,8 @@ struct SettingsHeaderView: View {
     @Binding var selectedView: SettingsView.MainView
     @Binding var showingAddSheet: Bool
     @Binding var showingAddCollectionSheet: Bool
+    @Binding var editingSnippet: Snippet?
+    @Binding var editingCollection: SnippetCollection?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -71,6 +73,11 @@ extension SettingsHeaderView {
 extension SettingsHeaderView {
     private var contextAwareAddButton: some View {
         Button(action: {
+            // Close any open editors first
+            editingSnippet = nil
+            editingCollection = nil
+            
+            // Then open the appropriate add sheet
             if selectedView == .collections {
                 showingAddCollectionSheet = true
             } else {

@@ -311,18 +311,20 @@ extension AddSnippetSlideOut {
     }
     
     private var componentVariablesGroup: some View {
-        EnhancedVariableGroup(
-            title: "🔢 Components",
-            color: .purple,
-            variables: [
-                EnhancedVariableInfo(variable: "{{day}}", title: "Day", example: getCurrentDayExample()),
-                EnhancedVariableInfo(variable: "{{month}}", title: "Month", example: getCurrentMonthExample()),
-                EnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
-                EnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
-            ],
-            expansion: $expansion
-        )
-    }
+            EnhancedVariableGroup(
+                title: "🔢 Components",
+                color: .purple,
+                variables: [
+                    EnhancedVariableInfo(variable: "{{day}}", title: "Day (Padded)", example: getCurrentDayExample()),
+                    EnhancedVariableInfo(variable: "{{day-short}}", title: "Day (Short)", example: getCurrentDayShortExample()),
+                    EnhancedVariableInfo(variable: "{{month}}", title: "Month (Padded)", example: getCurrentMonthExample()),
+                    EnhancedVariableInfo(variable: "{{month-short}}", title: "Month (Short)", example: getCurrentMonthShortExample()),
+                    EnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
+                    EnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
+                ],
+                expansion: $expansion
+            )
+        }
 }
 
 // MARK: - Tips Section 100063
@@ -502,26 +504,38 @@ extension AddSnippetSlideOut {
     }
     
     private func getCurrentDayExample() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd"
-        return formatter.string(from: Date())
-    }
-    
-    private func getCurrentMonthExample() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM"
-        return formatter.string(from: Date())
-    }
-    
-    private func getCurrentYearExample() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy"
-        return formatter.string(from: Date())
-    }
-    
-    private func getCurrentTimestampExample() -> String {
-        return String(Int(Date().timeIntervalSince1970))
-    }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd"
+            return formatter.string(from: Date())
+        }
+        
+        private func getCurrentDayShortExample() -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "d"
+            return formatter.string(from: Date())
+        }
+        
+        private func getCurrentMonthExample() -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MM"
+            return formatter.string(from: Date())
+        }
+        
+        private func getCurrentMonthShortExample() -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M"
+            return formatter.string(from: Date())
+        }
+        
+        private func getCurrentYearExample() -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy"
+            return formatter.string(from: Date())
+        }
+        
+        private func getCurrentTimestampExample() -> String {
+            return String(Int(Date().timeIntervalSince1970))
+        }
 }
 
 // MARK: - Enhanced Variable Models 100067

@@ -84,6 +84,7 @@ extension SnippetManager {
 extension SnippetManager {
     func addSnippet(_ snippet: Snippet) {
         snippets.append(snippet)
+        SaveNotificationManager.shared.show("Snippet created")
     }
     
     func deleteSnippet(_ snippet: Snippet) {
@@ -106,6 +107,7 @@ extension SnippetManager {
 extension SnippetManager {
     func addCollection(_ collection: SnippetCollection) {
         collections.append(collection)
+        SaveNotificationManager.shared.show("Collection created")
     }
     
     func deleteCollection(_ collection: SnippetCollection) {
@@ -259,6 +261,22 @@ struct PendingDeletion: Identifiable {
             return "Deleted '\(snippet.shortcut)'"
         case .collection(let collection, _):
             return "Deleted '\(collection.name)' collection"
+        }
+    }
+}
+
+// MARK: - Drag and Drop Support 100109
+extension SnippetManager {
+    func moveSnippet(_ snippet: Snippet, toCollection collection: SnippetCollection) {
+        if let index = snippets.firstIndex(where: { $0.id == snippet.id }) {
+            // Only move if it's a different collection
+            if snippets[index].collectionId != collection.id {
+                _ = snippets[index].collectionId
+                snippets[index].collectionId = collection.id
+                
+                // Log the move for potential undo functionality
+                print("Moved snippet '\(snippet.shortcut)' to collection '\(collection.name)'")
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ struct SnippetCardView: View {
     @StateObject private var snippetManager = SnippetManager.shared
     @State private var isHovered: Bool = false
     @State private var isExpanded: Bool = false
+    @State private var isDragging: Bool = false
     
     private var currentSnippet: Snippet {
         snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
@@ -28,11 +29,51 @@ struct SnippetCardView: View {
             handleCardTap()
         }
         .scaleEffect(isHovered ? 1.005 : 1.0)
+        .opacity(isDragging ? 0.6 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isHovered)
         .animation(.easeInOut(duration: 0.2), value: isBeingEdited)
+        .animation(.easeInOut(duration: 0.15), value: isDragging)
         .onHover { hovering in
             isHovered = hovering
         }
+        .onDrag {
+            isDragging = true
+            return NSItemProvider(object: SnippetDragData(snippet: currentSnippet))
+        }
+    }
+}
+
+// MARK: - Drag Preview 100137A
+extension SnippetCardView {
+    private var dragPreview: some View {
+        HStack(spacing: 8) {
+            Text(currentSnippet.shortcut)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.accentColor)
+                )
+            
+            Image(systemName: "arrow.right")
+                .font(.system(size: 8))
+                .foregroundColor(.secondary)
+            
+            Text(currentSnippet.expansion)
+                .font(.system(size: 10))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundColor(.primary)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .stroke(Color.accentColor, lineWidth: 1)
+        )
+        .frame(maxWidth: 200)
     }
 }
 

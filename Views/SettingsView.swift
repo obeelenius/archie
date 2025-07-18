@@ -47,11 +47,20 @@ struct SettingsView: View {
             ZStack {
                 mainLayout(geometry: geometry)
                 undoToastOverlay
+                SaveNotificationContainer()
             }
         }
         .frame(minWidth: 600, minHeight: 400)
         .animation(isDragging ? .none : .easeInOut(duration: 0.3), value: showingEditor)
         .animation(isDragging ? .none : .easeInOut(duration: 0.2), value: editorWidth)
+        .onChange(of: selectedView) { oldValue, newValue in
+            if newValue != .collections && editingCollection != nil {
+                editingCollection = nil
+            }
+            if newValue != .snippets && editingSnippet != nil {
+                editingSnippet = nil
+            }
+        }
         .sheet(isPresented: $showingAddCollectionSheet) {
             AddCollectionSheet(isShowing: $showingAddCollectionSheet)
         }
@@ -87,17 +96,19 @@ extension SettingsView {
     }
     
     private func mainContentArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 0) {
-            SettingsHeaderView(
-                selectedView: $selectedView,
-                showingAddSheet: $showingAddSheet,
-                showingAddCollectionSheet: $showingAddCollectionSheet
-            )
-            
-            contentBasedOnSelectedView
+            VStack(spacing: 0) {
+                SettingsHeaderView(
+                    selectedView: $selectedView,
+                    showingAddSheet: $showingAddSheet,
+                    showingAddCollectionSheet: $showingAddCollectionSheet,
+                    editingSnippet: $editingSnippet,
+                    editingCollection: $editingCollection
+                )
+                
+                contentBasedOnSelectedView
+            }
+            .frame(width: showingEditor ? geometry.size.width * (1 - editorWidth) : geometry.size.width)
         }
-        .frame(width: showingEditor ? geometry.size.width * (1 - editorWidth) : geometry.size.width)
-    }
     
     @ViewBuilder
     private var contentBasedOnSelectedView: some View {

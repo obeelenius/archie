@@ -13,6 +13,7 @@ struct EditCollectionSlideOut: View {
     @State private var keepDelimiter = false
     @State private var isEnabled = true
     @State private var selectedIcon = ""
+    @State private var selectedColor = "blue"
     @State private var showingError = false
     @State private var errorMessage = ""
     
@@ -52,6 +53,12 @@ struct EditCollectionSlideOut: View {
         CollectionIcon(name: "terminal", category: "Tech"),
         CollectionIcon(name: "gear", category: "Tech"),
         CollectionIcon(name: "cpu", category: "Tech")
+    ]
+    
+    private let availableColors = [
+        "blue", "green", "red", "orange", "purple", "pink",
+        "yellow", "indigo", "teal", "mint", "cyan", "brown",
+        "gray", "black", "white", "accentColor"
     ]
     
     private var groupedIcons: [String: [CollectionIcon]] {
@@ -121,6 +128,7 @@ extension EditCollectionSlideOut {
                 collectionStatusSection
                 collectionNameSection
                 iconSelectionSection
+                colorSelectionSection
                 suffixSection
                 delimiterBehaviorSection
                 collectionInfoSection
@@ -434,6 +442,7 @@ extension EditCollectionSlideOut {
         keepDelimiter = collection.keepDelimiter
         isEnabled = collection.isEnabled
         selectedIcon = collection.icon
+        selectedColor = collection.color
     }
     
     private func getDefaultIcon(for name: String) -> String {
@@ -443,6 +452,28 @@ extension EditCollectionSlideOut {
         case "Signature": return "signature"
         case "Date": return "clock"
         default: return "folder"
+        }
+    }
+    
+    private func getColor(from colorName: String) -> Color {
+        switch colorName {
+        case "blue": return .blue
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        case "purple": return .purple
+        case "pink": return .pink
+        case "yellow": return .yellow
+        case "indigo": return .indigo
+        case "teal": return .teal
+        case "mint": return .mint
+        case "cyan": return .cyan
+        case "brown": return .brown
+        case "gray": return .gray
+        case "black": return .black
+        case "white": return Color.white
+        case "accentColor": return .accentColor
+        default: return .blue
         }
     }
     
@@ -461,6 +492,7 @@ extension EditCollectionSlideOut {
             snippetManager.collections[index].keepDelimiter = keepDelimiter
             snippetManager.collections[index].isEnabled = isEnabled
             snippetManager.collections[index].icon = selectedIcon
+            snippetManager.collections[index].color = selectedColor
         }
         
         isShowing = false
@@ -504,6 +536,79 @@ struct IconCategorySection: View {
                     .help(icon.name)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Color Selection Section 100025B
+extension EditCollectionSlideOut {
+    private var colorSelectionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "paintpalette")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 12))
+                
+                Text("Collection Color")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            
+            // Current color preview
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(getColor(from: selectedColor))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                
+                Text("Selected Color")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+            
+            // Color grid
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 8), spacing: 8) {
+                ForEach(availableColors, id: \.self) { colorName in
+                    Button(action: {
+                        selectedColor = colorName
+                    }) {
+                        Circle()
+                            .fill(getColor(from: colorName))
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Circle()
+                                    .stroke(selectedColor == colorName ? Color.primary : Color(NSColor.separatorColor), lineWidth: selectedColor == colorName ? 3 : 1)
+                            )
+                            .overlay(
+                                selectedColor == colorName ?
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 12, weight: .bold))
+                                : nil
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.textBackgroundColor))
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            
+            Text("Choose a color to represent this collection")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
         }
     }
 }
