@@ -8,16 +8,18 @@ struct AllCollectionsListView: View {
     let collectionsWithSnippets: [(SnippetCollection, [Snippet])]
     @Binding var editingSnippet: Snippet?
     let onCollectionHeaderTapped: (() -> Void)?
-    @State private var expandedCollections: Set<UUID> = []
+    @StateObject private var snippetManager = SnippetManager.shared
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(collectionsWithSnippets, id: \.0.id) { collectionData in
+                    let isExpanded = snippetManager.expandedCollections.contains(collectionData.0.id)
+                    
                     AllCollectionsSectionView(
                         collection: collectionData.0,
                         snippets: collectionData.1,
-                        isExpanded: expandedCollections.contains(collectionData.0.id),
+                        isExpanded: isExpanded,
                         editingSnippet: $editingSnippet,
                         onToggle: {
                             toggleCollection(collectionData.0.id)
@@ -29,20 +31,23 @@ struct AllCollectionsListView: View {
             .padding(.vertical, 12)
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-        .onAppear {
-            // Expand all collections by default
-            expandedCollections = Set(collectionsWithSnippets.map { $0.0.id })
-        }
     }
     
     private func toggleCollection(_ collectionId: UUID) {
+        print("DEBUG: Toggling collection \(collectionId)")
+        print("DEBUG: Before toggle - expandedCollections: \(snippetManager.expandedCollections)")
+        
         withAnimation(.easeInOut(duration: 0.3)) {
-            if expandedCollections.contains(collectionId) {
-                expandedCollections.remove(collectionId)
+            if snippetManager.expandedCollections.contains(collectionId) {
+                snippetManager.expandedCollections.remove(collectionId)
+                print("DEBUG: Collapsed collection \(collectionId)")
             } else {
-                expandedCollections.insert(collectionId)
+                snippetManager.expandedCollections.insert(collectionId)
+                print("DEBUG: Expanded collection \(collectionId)")
             }
         }
+        
+        print("DEBUG: After toggle - expandedCollections: \(snippetManager.expandedCollections)")
     }
 }
 
@@ -127,15 +132,14 @@ struct AllCollectionsHeaderView: View {
             }
             onToggle()
         }) {
-            HStack(spacing: 12) {
-                // Left side: Icon and info
-                HStack(spacing: 10) {
+            HStack(spacing: 10) {
+                // Left side: Icon and title only
+                HStack(spacing: 8) {
                     AllCollectionIconView(collection: collection)
-                    CollectionInfoView(
-                        title: collection.name,
-                        snippetCount: snippetCount,
-                        enabledCount: enabledCount
-                    )
+                    
+                    Text(collection.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
                 }
                 
                 Spacer()
@@ -145,22 +149,22 @@ struct AllCollectionsHeaderView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
                             .foregroundColor(collectionColor)
-                            .font(.system(size: 12))
+                            .font(.system(size: 10))
                         Text("Drop here")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(collectionColor)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 4)
                             .fill(collectionColor.opacity(0.1))
                             .stroke(collectionColor.opacity(0.3), lineWidth: 1)
                     )
                 }
                 
                 // Right side: Preview and expand indicator
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     if !isExpanded && !snippetPreviews.isEmpty && !isDropTarget {
                         AllCollectionPreviewSnippetsView(snippets: snippetPreviews, collection: collection)
                     }
@@ -168,34 +172,34 @@ struct AllCollectionsHeaderView: View {
                     ExpandIndicatorView(isExpanded: isExpanded)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(headerBackground)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
-        .padding(.bottom, isExpanded ? 6 : 10)
+        .padding(.bottom, isExpanded ? 4 : 6)
         .onDrop(of: [.json], isTargeted: $isDropTarget) { providers in
             return handleSnippetDrop(providers: providers)
         }
     }
     
     private var headerBackground: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: 6)
             .fill(Color(NSColor.controlBackgroundColor))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(collectionColor.opacity(isDropTarget ? 0.08 : 0.02))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .stroke(collectionColor.opacity(isDropTarget ? 0.5 : 0.2), lineWidth: isDropTarget ? 2 : 1)
             )
             .shadow(
-                color: Color.black.opacity(0.03),
-                radius: 2,
+                color: Color.black.opacity(0.02),
+                radius: 1,
                 x: 0,
-                y: 1
+                y: 0.5
             )
             .animation(.easeInOut(duration: 0.2), value: isDropTarget)
     }
@@ -313,12 +317,12 @@ struct AllCollectionIconView: View {
     
     var body: some View {
         Image(systemName: icon)
-            .font(.system(size: 14, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundColor(color)
-            .frame(width: 24, height: 24)
+            .frame(width: 20, height: 20)
             .background(
                 Circle()
-                    .fill(color.opacity(0.15))
+                    .fill(color.opacity(0.12))
             )
     }
     
@@ -355,22 +359,22 @@ struct AllCollectionPreviewSnippetsView: View {
     }
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             ForEach(snippets, id: \.id) { snippet in
                 Text(snippet.shortcut)
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
                     .foregroundColor(color)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
                     .background(
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(color.opacity(0.1))
                     )
             }
             
             if snippets.count > 3 {
                 Text("+\(snippets.count - 3)")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 8, weight: .medium))
                     .foregroundColor(.secondary)
             }
         }

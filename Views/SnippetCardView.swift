@@ -85,52 +85,52 @@ extension SnippetCardView {
 // MARK: - Main Card Content 100138
 extension SnippetCardView {
     private var mainCardContent: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             shortcutPill
             arrowIndicator
             expansionPreview
             Spacer()
             actionButtons
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 12)
         .background(cardBackground)
     }
     
     private var shortcutPill: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Text(currentSnippet.shortcut)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundColor(pillForegroundColor)
             
             if !currentSnippet.requiresSpace {
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 8))
+                    .font(.system(size: 6))
                     .foregroundColor(pillForegroundColor.opacity(0.7))
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 4)
                 .fill(pillBackgroundColor)
-                .stroke(pillBorderColor, lineWidth: 1)
+                .stroke(pillBorderColor, lineWidth: 0.5)
         )
     }
     
     private var arrowIndicator: some View {
         Image(systemName: "arrow.right")
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 9, weight: .medium))
             .foregroundColor(.secondary)
             .scaleEffect(isHovered ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isHovered)
     }
     
     private var expansionPreview: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             Text(currentSnippet.expansion.replacingOccurrences(of: "\n", with: " "))
                 .lineLimit(1)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundColor(currentSnippet.isEnabled ? .primary : .secondary)
             
             statusIndicators
@@ -138,34 +138,24 @@ extension SnippetCardView {
     }
     
     private var statusIndicators: some View {
-        HStack(spacing: 8) {
-            if currentSnippet.expansion.contains("\n") {
-                HStack(spacing: 2) {
-                    Image(systemName: "text.alignleft")
-                        .font(.system(size: 8))
-                    Text("Multi-line")
-                        .font(.system(size: 9))
+            HStack(spacing: 6) {
+                if currentSnippet.expansion.contains("\n") {
+                    HStack(spacing: 1) {
+                        Image(systemName: "text.alignleft")
+                            .font(.system(size: 6))
+                        Text("Multi-line")
+                            .font(.system(size: 8))
+                    }
+                    .foregroundColor(.secondary)
                 }
-                .foregroundColor(.secondary)
-            }
-            
-            if !currentSnippet.requiresSpace {
-                HStack(spacing: 2) {
-                    Image(systemName: "bolt")
-                        .font(.system(size: 8))
-                    Text("Instant")
-                        .font(.system(size: 9))
-                }
-                .foregroundColor(.orange)
             }
         }
-    }
 }
 
 // MARK: - Action Buttons 100139
 extension SnippetCardView {
     private var actionButtons: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             expandCollapseButton
             enableToggle
         }
@@ -178,13 +168,13 @@ extension SnippetCardView {
             }
         }) {
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 8, weight: .medium))
                 .foregroundColor(.secondary)
-                .frame(width: 18, height: 18)
+                .frame(width: 14, height: 14)
                 .background(
                     Circle()
                         .fill(Color(NSColor.controlBackgroundColor))
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
                 )
         }
         .buttonStyle(.plain)
@@ -200,17 +190,18 @@ extension SnippetCardView {
             }
         ))
         .toggleStyle(CompactToggleStyle())
+        .scaleEffect(0.8)
     }
     
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: 6)
             .fill(cardBackgroundColor)
-            .stroke(cardBorderColor, lineWidth: isBeingEdited ? 2 : 1)
+            .stroke(cardBorderColor, lineWidth: isBeingEdited ? 1.5 : 0.5)
             .shadow(
                 color: cardShadowColor,
-                radius: isHovered || isBeingEdited ? 4 : 2,
+                radius: isHovered || isBeingEdited ? 2 : 1,
                 x: 0,
-                y: isHovered || isBeingEdited ? 2 : 1
+                y: isHovered || isBeingEdited ? 1 : 0.5
             )
     }
 }

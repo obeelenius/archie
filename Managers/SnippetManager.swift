@@ -19,6 +19,13 @@ class SnippetManager: ObservableObject {
         }
     }
     
+    // Collection expansion state persistence
+    @Published var expandedCollections: Set<UUID> = [] {
+        didSet {
+            saveExpandedCollections()
+        }
+    }
+    
     // Undo system
     @Published var pendingDeletions: [PendingDeletion] = []
     private var deletionTimers: [UUID: Timer] = [:]
@@ -26,6 +33,7 @@ class SnippetManager: ObservableObject {
     private init() {
         loadCollections()
         loadSnippets()
+        loadExpandedCollections()
         setupDefaultCollections()
         fixOrphanedSnippets() // Fix any snippets without collectionId
     }
@@ -37,6 +45,12 @@ extension SnippetManager {
         // Only create defaults if no collections exist
         if collections.isEmpty {
             createDefaultCollections()
+        } else {
+            // Ensure existing collections are expanded by default if no expansion state exists
+            if expandedCollections.isEmpty {
+                expandedCollections = Set(collections.map { $0.id })
+                print("DEBUG: No expansion state found, expanding all existing collections")
+            }
         }
     }
     
@@ -48,6 +62,9 @@ extension SnippetManager {
         let contactCollection = SnippetCollection(name: "Contact", suffix: "", keepDelimiter: false, icon: "at")
         
         collections = [generalCollection, signatureCollection, dateCollection, contactCollection]
+        
+        // Expand all default collections
+        expandedCollections = Set(collections.map { $0.id })
         
         createDefaultSnippets(
             generalCollection: generalCollection,
@@ -108,6 +125,8 @@ extension SnippetManager {
 extension SnippetManager {
     func addCollection(_ collection: SnippetCollection) {
         collections.append(collection)
+        // Expand new collections by default
+        expandNewCollection(collection.id)
         SaveNotificationManager.shared.show("Collection created")
     }
     
@@ -125,8 +144,9 @@ extension SnippetManager {
         )
         pendingDeletions.append(pendingDeletion)
         
-        // Remove from collections immediately
+        // Remove from collections and expansion state
         collections.removeAll { $0.id == collection.id }
+        expandedCollections.remove(collection.id)
         
         // Schedule auto-confirm after 3 seconds
         scheduleAutoConfirmDeletion(pendingDeletion)
@@ -263,6 +283,30 @@ extension SnippetManager {
         if let data = UserDefaults.standard.data(forKey: "collections"),
            let decoded = try? JSONDecoder().decode([SnippetCollection].self, from: data) {
             collections = decoded
+        }
+    }
+    
+    private func saveExpandedCollections() {
+        let expandedArray = Array(expandedCollections).map { $0.uuidString }
+        UserDefaults.standard.set(expandedArray, forKey: "expandedCollections")
+        print("DEBUG: Saved expandedCollections: \(expandedArray)")
+    }
+    
+    private func loadExpandedCollections() {
+        if let expandedArray = UserDefaults.standard.array(forKey: "expandedCollections") as? [String] {
+            expandedCollections = Set(expandedArray.compactMap { UUID(uuidString: $0) })
+            print("DEBUG: Loaded expandedCollections: \(expandedCollections)")
+        } else {
+            // Default: expand all collections on first launch only
+            print("DEBUG: No saved expansion state, will expand collections as they are created")
+            expandedCollections = Set()
+        }
+    }
+    
+    // Call this when a new collection is created to expand it by default
+    func expandNewCollection(_ collectionId: UUID) {
+        if !expandedCollections.contains(collectionId) {
+            expandedCollections.insert(collectionId)
         }
     }
 }

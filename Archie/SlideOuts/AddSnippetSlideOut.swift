@@ -129,7 +129,6 @@ extension AddSnippetSlideOut {
     private var formContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                collectionSelectionSection
                 snippetDetailsSection
                 triggerBehaviorSection
                 expansionSection
@@ -162,6 +161,49 @@ extension AddSnippetSlideOut {
                         isSelected: triggerMode == mode,
                         onSelect: { triggerMode = mode }
                     )
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
+    }
+}
+
+// MARK: - Snippet Details Section 100060
+extension AddSnippetSlideOut {
+    private var snippetDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 6) {
+                Image(systemName: "keyboard")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 14))
+                
+                Text("Snippet Details")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shortcut")
+                        .font(.system(size: 13, weight: .semibold))
+                    
+                    TextField("e.g., 'addr', '@@'", text: $shortcut)
+                        .textFieldStyle(.plain)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(NSColor.textBackgroundColor))
+                                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        )
+                    
+                    Text("Type + space to expand")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -227,109 +269,33 @@ extension AddSnippetSlideOut {
     }
 }
 
-// MARK: - Shortcut Section 100060
-extension AddSnippetSlideOut {
-    private var shortcutSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "keyboard")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
-                
-                Text("Shortcut")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            TextField("e.g., 'addr', '@@'", text: $shortcut)
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .monospaced))
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(NSColor.textBackgroundColor))
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
-            
-            Text("Type + space to expand")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-// MARK: - Expansion Section 100061
-extension AddSnippetSlideOut {
-    private var expansionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "text.alignleft")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
-                
-                Text("Expansion")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            expansionEditor
-            
-            Text("Supports line breaks and variables")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-            
-            enhancedVariablesSection
-        }
-    }
-    
-    private var expansionEditor: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(NSColor.textBackgroundColor))
-                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                .frame(minHeight: 100)
-            
-            TextEditor(text: $expansion)
-                .font(.system(.body, design: .monospaced))
-                .padding(6)
-                .scrollContentBackground(.hidden)
-            
-            if expansion.isEmpty {
-                Text("Replacement text...")
-                    .foregroundColor(.secondary)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(10)
-                    .allowsHitTesting(false)
-            }
-        }
-    }
-}
-
 // MARK: - Enhanced Variables Section 100062
 extension AddSnippetSlideOut {
     private var enhancedVariablesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
                 Image(systemName: "curlybraces")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.purple)
                 Text("Variables")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.primary)
                 Spacer()
                 Text("Click to insert • Live examples")
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 dateVariablesGroup
                 timeVariablesGroup
                 relativeVariablesGroup
                 componentVariablesGroup
             }
         }
-        .padding(12)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.purple.opacity(0.03))
                 .stroke(Color.purple.opacity(0.15), lineWidth: 1)
         )
@@ -378,20 +344,20 @@ extension AddSnippetSlideOut {
     }
     
     private var componentVariablesGroup: some View {
-            EnhancedVariableGroup(
-                title: "🔢 Components",
-                color: .purple,
-                variables: [
-                    EnhancedVariableInfo(variable: "{{day}}", title: "Day (Padded)", example: getCurrentDayExample()),
-                    EnhancedVariableInfo(variable: "{{day-short}}", title: "Day (Short)", example: getCurrentDayShortExample()),
-                    EnhancedVariableInfo(variable: "{{month}}", title: "Month (Padded)", example: getCurrentMonthExample()),
-                    EnhancedVariableInfo(variable: "{{month-short}}", title: "Month (Short)", example: getCurrentMonthShortExample()),
-                    EnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
-                    EnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
-                ],
-                expansion: $expansion
-            )
-        }
+        EnhancedVariableGroup(
+            title: "🔢 Components",
+            color: .purple,
+            variables: [
+                EnhancedVariableInfo(variable: "{{day}}", title: "Day (Padded)", example: getCurrentDayExample()),
+                EnhancedVariableInfo(variable: "{{day-short}}", title: "Day (Short)", example: getCurrentDayShortExample()),
+                EnhancedVariableInfo(variable: "{{month}}", title: "Month (Padded)", example: getCurrentMonthExample()),
+                EnhancedVariableInfo(variable: "{{month-short}}", title: "Month (Short)", example: getCurrentMonthShortExample()),
+                EnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
+                EnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
+            ],
+            expansion: $expansion
+        )
+    }
 }
 
 // MARK: - Tips Section 100063
@@ -786,140 +752,5 @@ struct AddFlowResult {
         }
         
         bounds = CGSize(width: rect.width, height: currentY + lineHeight)
-    }
-}
-
-
-// MARK: - Collection Selection Section 100073
-extension AddSnippetSlideOut {
-    private var collectionSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "folder")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 14))
-                
-                Text("Collection")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.primary)
-            }
-            
-            Menu {
-                ForEach(snippetManager.collections) { collection in
-                    Button(action: {
-                        selectedCollectionId = collection.id
-                    }) {
-                        HStack {
-                            Image(systemName: collection.icon.isEmpty ? "folder" : collection.icon)
-                            Text(collection.name)
-                            if selectedCollectionId == collection.id {
-                                Spacer()
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            } label: {
-                HStack {
-                    if let selectedCollection = snippetManager.collections.first(where: { $0.id == selectedCollectionId }) {
-                        Image(systemName: selectedCollection.icon.isEmpty ? "folder" : selectedCollection.icon)
-                            .foregroundColor(getCollectionColor(selectedCollection))
-                            .font(.system(size: 12))
-                        
-                        Text(selectedCollection.name)
-                            .font(.system(size: 12))
-                            .foregroundColor(.primary)
-                    } else {
-                        Text("Select Collection")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.textBackgroundColor))
-                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            
-            Text("Choose which collection this snippet belongs to")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-    
-    private var snippetDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 6) {
-                Image(systemName: "keyboard")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 14))
-                
-                Text("Snippet Details")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.primary)
-            }
-            
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Shortcut")
-                        .font(.system(size: 13, weight: .semibold))
-                    
-                    TextField("e.g., 'addr', '@@'", text: $shortcut)
-                        .textFieldStyle(.plain)
-                        .font(.system(.body, design: .monospaced))
-                        .padding(10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(NSColor.textBackgroundColor))
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                        )
-                    
-                    Text("Type + space to expand")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-    
-    private func getCollectionColor(_ collection: SnippetCollection) -> Color {
-        switch collection.color {
-        case "blue": return .blue
-        case "green": return .green
-        case "red": return .red
-        case "orange": return .orange
-        case "purple": return .purple
-        case "pink": return .pink
-        case "yellow": return .yellow
-        case "indigo": return .indigo
-        case "teal": return .teal
-        case "mint": return .mint
-        case "cyan": return .cyan
-        case "brown": return .brown
-        case "gray": return .gray
-        case "black": return .black
-        case "white": return Color.white
-        case "accentColor": return .accentColor
-        default: return .blue
-        }
     }
 }

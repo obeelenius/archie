@@ -161,36 +161,6 @@ struct ModernToggleStyle: ToggleStyle {
             configuration.label
             
             RoundedRectangle(cornerRadius: 12)
-                .fill(configuration.isOn ? Color.green : Color.gray.opacity(0.4))
-                .frame(width: 44, height: 24)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(configuration.isOn ? Color.clear : Color.gray.opacity(0.6), lineWidth: 1)
-                )
-                .overlay(modernToggleThumb(configuration))
-                .onTapGesture {
-                    configuration.isOn.toggle()
-                }
-        }
-    }
-    
-    private func modernToggleThumb(_ configuration: Configuration) -> some View {
-        Circle()
-            .fill(Color.white)
-            .frame(width: 20, height: 20)
-            .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 1.5)
-            .offset(x: configuration.isOn ? 10 : -10)
-            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
-    }
-}
-
-// MARK: - Modern Toggle Style 100088
-struct ModernToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack {
-            configuration.label
-            
-            RoundedRectangle(cornerRadius: 12)
                 .fill(configuration.isOn ? Color.green : Color(NSColor.controlColor))
                 .frame(width: 44, height: 24)
                 .overlay(modernToggleThumb(configuration))

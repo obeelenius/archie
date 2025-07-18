@@ -8,7 +8,7 @@ struct SnippetsListView: View {
     let groupedSnippets: [String: [Snippet]]
     @Binding var editingSnippet: Snippet?
     let onCollectionHeaderTapped: (() -> Void)?
-    @State private var expandedCollections: Set<String> = []
+    @StateObject private var snippetManager = SnippetManager.shared
     
     init(groupedSnippets: [String: [Snippet]],
          editingSnippet: Binding<Snippet?>,
@@ -26,13 +26,16 @@ struct SnippetsListView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(sortedGroups, id: \.0) { collectionData in
+                    let collection = snippetManager.collections.first { $0.name == collectionData.0 }
+                    let collectionId = collection?.id ?? UUID() // fallback for unknown collections
+                    
                     CollectionSectionView(
                         collectionName: collectionData.0,
                         snippets: collectionData.1,
-                        isExpanded: expandedCollections.contains(collectionData.0),
+                        isExpanded: snippetManager.expandedCollections.contains(collectionId),
                         editingSnippet: $editingSnippet,
                         onToggle: {
-                            toggleCollection(collectionData.0)
+                            toggleCollection(collectionId)
                         },
                         onHeaderTapped: onCollectionHeaderTapped
                     )
@@ -42,17 +45,23 @@ struct SnippetsListView: View {
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
         .onAppear {
-            // Expand all collections by default
-            expandedCollections = Set(sortedGroups.map { $0.0 })
+            // Ensure newly created collections are expanded by default
+            for (collectionName, _) in sortedGroups {
+                if let collection = snippetManager.collections.first(where: { $0.name == collectionName }) {
+                    if !snippetManager.expandedCollections.contains(collection.id) {
+                        snippetManager.expandedCollections.insert(collection.id)
+                    }
+                }
+            }
         }
     }
     
-    private func toggleCollection(_ name: String) {
+    private func toggleCollection(_ collectionId: UUID) {
         withAnimation(.easeInOut(duration: 0.3)) {
-            if expandedCollections.contains(name) {
-                expandedCollections.remove(name)
+            if snippetManager.expandedCollections.contains(collectionId) {
+                snippetManager.expandedCollections.remove(collectionId)
             } else {
-                expandedCollections.insert(name)
+                snippetManager.expandedCollections.insert(collectionId)
             }
         }
     }
@@ -203,15 +212,14 @@ struct CollectionHeaderView: View {
             }
             onToggle()
         }) {
-            HStack(spacing: 12) {
-                // Left side: Icon and info
-                HStack(spacing: 10) {
+            HStack(spacing: 10) {
+                // Left side: Icon and title only
+                HStack(spacing: 8) {
                     CollectionIconView(collectionName: title)
-                    CollectionInfoView(
-                        title: title,
-                        snippetCount: snippetCount,
-                        enabledCount: enabledCount
-                    )
+                    
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
                 }
                 
                 Spacer()
@@ -221,22 +229,22 @@ struct CollectionHeaderView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
                             .foregroundColor(collectionColor)
-                            .font(.system(size: 12))
+                            .font(.system(size: 10))
                         Text("Drop here")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(collectionColor)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 4)
                             .fill(collectionColor.opacity(0.1))
                             .stroke(collectionColor.opacity(0.3), lineWidth: 1)
                     )
                 }
                 
                 // Right side: Preview and expand indicator
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     if !isExpanded && !snippetPreviews.isEmpty && !isDropTarget {
                         PreviewSnippetsView(snippets: snippetPreviews, collectionName: title)
                     }
@@ -244,34 +252,34 @@ struct CollectionHeaderView: View {
                     ExpandIndicatorView(isExpanded: isExpanded)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(headerBackground)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
-        .padding(.bottom, isExpanded ? 6 : 10)
+        .padding(.bottom, isExpanded ? 4 : 6)
         .onDrop(of: [.json], isTargeted: $isDropTarget) { providers in
                     return handleSnippetDrop(providers: providers)
                 }
     }
     
     private var headerBackground: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: 6)
             .fill(Color(NSColor.controlBackgroundColor))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(collectionColor.opacity(isDropTarget ? 0.08 : 0.02))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .stroke(collectionColor.opacity(isDropTarget ? 0.5 : 0.2), lineWidth: isDropTarget ? 2 : 1)
             )
             .shadow(
-                color: Color.black.opacity(0.03),
-                radius: 2,
+                color: Color.black.opacity(0.02),
+                radius: 1,
                 x: 0,
-                y: 1
+                y: 0.5
             )
             .animation(.easeInOut(duration: 0.2), value: isDropTarget)
     }
@@ -337,12 +345,12 @@ struct CollectionIconView: View {
     
     var body: some View {
         Image(systemName: icon)
-            .font(.system(size: 14, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundColor(color)
-            .frame(width: 24, height: 24)
+            .frame(width: 20, height: 20)
             .background(
                 Circle()
-                    .fill(color.opacity(0.15))
+                    .fill(color.opacity(0.12))
             )
     }
     
@@ -393,25 +401,6 @@ struct CollectionIconView: View {
     }
 }
 
-// MARK: - Collection Info View 100148
-struct CollectionInfoView: View {
-    let title: String
-    let snippetCount: Int
-    let enabledCount: Int
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.primary)
-            
-            Text("\(snippetCount) snippet\(snippetCount == 1 ? "" : "s") • \(enabledCount) enabled")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
 // MARK: - Preview Snippets View 100149
 struct PreviewSnippetsView: View {
     let snippets: [Snippet]
@@ -430,22 +419,22 @@ struct PreviewSnippetsView: View {
     }
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             ForEach(snippets, id: \.id) { snippet in
                 Text(snippet.shortcut)
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
                     .foregroundColor(color)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
                     .background(
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(color.opacity(0.1))
                     )
             }
             
             if snippets.count > 3 {
                 Text("+\(snippets.count - 3)")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 8, weight: .medium))
                     .foregroundColor(.secondary)
             }
         }
@@ -492,7 +481,7 @@ struct ExpandIndicatorView: View {
     
     var body: some View {
         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 9, weight: .medium))
             .foregroundColor(.secondary)
             .animation(.easeInOut(duration: 0.2), value: isExpanded)
     }

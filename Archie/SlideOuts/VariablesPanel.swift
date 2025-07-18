@@ -41,7 +41,7 @@ extension VariablesPanel {
 extension VariablesPanel {
     private var variablesContent: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 VariableSection(
                     title: "Dates",
                     icon: "calendar",
@@ -70,7 +70,7 @@ extension VariablesPanel {
                     onVariableSelected: onVariableSelected
                 )
             }
-            .padding(12)
+            .padding(16)
         }
         .background(Color(NSColor.textBackgroundColor).opacity(0.5))
     }
@@ -265,13 +265,13 @@ struct VariableSection: View {
     let onVariableSelected: (String) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             sectionHeader
             variablesGrid
         }
-        .padding(12)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color(NSColor.controlBackgroundColor))
                 .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
         )
@@ -289,14 +289,13 @@ struct VariableSection: View {
             
             Spacer()
         }
-        .padding(.bottom, 4)
     }
     
     private var variablesGrid: some View {
         LazyVGrid(columns: [
             GridItem(.flexible(), spacing: 8),
             GridItem(.flexible(), spacing: 8)
-        ], spacing: 8) {
+        ], spacing: 10) {
             ForEach(variables, id: \.variable) { variableInfo in
                 VariablePill(
                     variableInfo: variableInfo,
@@ -319,70 +318,47 @@ struct VariablePill: View {
     
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 6) {
-                iconAndTitleRow
-                variableCodeSection
-                exampleOutput
+            VStack(alignment: .leading, spacing: 8) {
+                // Variable code at top
+                Text(variableInfo.variable)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(variableInfo.color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(variableInfo.color.opacity(0.12))
+                    )
+                
+                // Title and example
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(variableInfo.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    Text(variableInfo.example)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
-            .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
             .background(buttonBackground)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.96 : (isHovered ? 1.02 : 1.0))
-        .animation(.easeInOut(duration: 0.15), value: isHovered)
-        .animation(.easeInOut(duration: 0.1), value: isPressed)
+        .scaleEffect(isPressed ? 0.97 : (isHovered ? 1.02 : 1.0))
+        .animation(.easeInOut(duration: 0.15), value: isPressed)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
         .onHover { hovering in
             isHovered = hovering
         }
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             isPressed = pressing
         }, perform: {})
-    }
-    
-    private var iconAndTitleRow: some View {
-        HStack(spacing: 6) {
-            Image(systemName: variableInfo.icon)
-                .foregroundColor(variableInfo.color)
-                .font(.system(size: 12, weight: .medium))
-                .frame(width: 16, height: 16)
-            
-            Text(variableInfo.title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-            
-            Spacer(minLength: 0)
-        }
-    }
-    
-    private var variableCodeSection: some View {
-        HStack {
-            Text(variableInfo.variable)
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(variableInfo.color)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(variableInfo.color.opacity(0.1))
-                        .stroke(variableInfo.color.opacity(0.3), lineWidth: 1)
-                )
-            
-            Spacer()
-        }
-    }
-    
-    private var exampleOutput: some View {
-        HStack {
-            Text(variableInfo.example)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            
-            Spacer(minLength: 0)
-        }
+        .help("\(variableInfo.title) - Example: \(variableInfo.example)")
     }
     
     private var buttonBackground: some View {
@@ -390,7 +366,7 @@ struct VariablePill: View {
             .fill(buttonBackgroundColor)
             .stroke(buttonBorderColor, lineWidth: 1)
             .shadow(
-                color: .black.opacity(isPressed ? 0.1 : 0.05),
+                color: .black.opacity(isPressed ? 0.08 : 0.03),
                 radius: isPressed ? 2 : 4,
                 x: 0,
                 y: isPressed ? 1 : 2
@@ -399,9 +375,9 @@ struct VariablePill: View {
     
     private var buttonBackgroundColor: Color {
         if isPressed {
-            return variableInfo.color.opacity(0.15)
+            return variableInfo.color.opacity(0.12)
         } else if isHovered {
-            return variableInfo.color.opacity(0.08)
+            return variableInfo.color.opacity(0.06)
         } else {
             return Color(NSColor.controlBackgroundColor)
         }
@@ -411,7 +387,7 @@ struct VariablePill: View {
         if isPressed {
             return variableInfo.color.opacity(0.4)
         } else if isHovered {
-            return variableInfo.color.opacity(0.3)
+            return variableInfo.color.opacity(0.25)
         } else {
             return Color(NSColor.separatorColor).opacity(0.3)
         }
