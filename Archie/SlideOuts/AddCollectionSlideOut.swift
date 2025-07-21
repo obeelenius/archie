@@ -146,7 +146,6 @@ extension AddCollectionSlideOut {
             VStack(spacing: 20) {
                 collectionNameSection
                 iconAndColorSection
-                suffixAndBehaviorSection
                 collectionTipsSection
             }
             .padding(16)
@@ -341,7 +340,7 @@ extension AddCollectionSlideOut {
             VStack(alignment: .leading, spacing: 6) {
                 CompactTip(text: "Collections help organize related snippets")
                 CompactTip(text: "Use descriptive names like 'Work' or 'Personal'")
-                CompactTip(text: "Suffixes create collection-specific triggers")
+                CompactTip(text: "Enable/disable entire collections at once")
             }
         }
         .padding(16)
@@ -388,8 +387,8 @@ extension AddCollectionSlideOut {
         
         var newCollection = SnippetCollection(
             name: trimmedName,
-            suffix: suffix.trimmingCharacters(in: .whitespacesAndNewlines),
-            keepDelimiter: keepDelimiter,
+            suffix: "", // No suffix support for now
+            keepDelimiter: false,
             icon: selectedIcon
         )
         newCollection.color = selectedColor
@@ -398,8 +397,6 @@ extension AddCollectionSlideOut {
         
         // Clear form
         name = ""
-        suffix = ""
-        keepDelimiter = false
         selectedIcon = "folder"
         selectedColor = "blue"
         isShowing = false

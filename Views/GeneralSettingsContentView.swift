@@ -4,9 +4,10 @@ import SwiftUI
 
 // MARK: - General Settings Content View 100112
 struct GeneralSettingsContentView: View {
-    @State private var startAtLogin = false
-    @State private var showNotifications = true
-    @State private var soundEnabled = false
+    @AppStorage("startAtLogin") private var startAtLogin = false
+    @AppStorage("showNotifications") private var showNotifications = true
+    @AppStorage("soundEnabled") private var soundEnabled = false
+    @AppStorage("selectedExpansionSound") private var selectedExpansionSound = SoundManager.ExpansionSound.pop.rawValue
     
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +20,18 @@ struct GeneralSettingsContentView: View {
                 .padding(16)
             }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+        }
+        .onChange(of: startAtLogin) { oldValue, newValue in
+            SaveNotificationManager.shared.show("Settings saved")
+        }
+        .onChange(of: showNotifications) { oldValue, newValue in
+            SaveNotificationManager.shared.show("Settings saved")
+        }
+        .onChange(of: soundEnabled) { oldValue, newValue in
+            SaveNotificationManager.shared.show("Settings saved")
+        }
+        .onChange(of: selectedExpansionSound) { oldValue, newValue in
+            SaveNotificationManager.shared.show("Settings saved")
         }
     }
 }
@@ -41,7 +54,7 @@ extension GeneralSettingsContentView {
 // MARK: - Notifications Section 100114
 extension GeneralSettingsContentView {
     private var notificationsSection: some View {
-        SettingsSection(title: "Notifications", icon: "bell") {
+        SettingsSection(title: "Feedback", icon: "bell") {
             SettingsRow(
                 title: "Show notifications",
                 subtitle: "Display alerts when snippets are expanded"
@@ -57,7 +70,55 @@ extension GeneralSettingsContentView {
                 Toggle("", isOn: $soundEnabled)
                     .toggleStyle(ModernToggleStyle())
             }
+            
+            if soundEnabled {
+                soundSelectionRow
+            }
         }
+    }
+    
+    private var soundSelectionRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Sound")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Picker("Sound", selection: $selectedExpansionSound) {
+                    ForEach(SoundManager.ExpansionSound.allCases, id: \.rawValue) { sound in
+                        Text(sound.displayName)
+                            .tag(sound.rawValue)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 120)
+            }
+            
+            HStack {
+                Button("Preview") {
+                    let sound = SoundManager.ExpansionSound(rawValue: selectedExpansionSound) ?? .pop
+                    SoundManager.shared.previewSound(sound)
+                }
+                .font(.system(size: 12))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.accentColor.opacity(0.1))
+                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                )
+                .foregroundColor(.accentColor)
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.top, 8)
+        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+        .animation(.easeInOut(duration: 0.2), value: soundEnabled)
     }
 }
 

@@ -316,6 +316,19 @@ struct CollectionCard: View {
         snippetManager.collections.first { $0.id == collection.id } ?? collection
     }
     
+    // Calculate the effective enabled state based on snippets
+    var effectiveEnabledState: Bool {
+        // Get the current snippets from the manager to ensure we have the latest state
+        let currentSnippets = snippetManager.snippets.filter { $0.collectionId == collection.id }
+        
+        // If collection has no snippets, use collection's isEnabled state
+        if currentSnippets.isEmpty {
+            return currentCollection.isEnabled
+        }
+        // If collection has snippets, it's enabled only if ALL snippets are enabled
+        return currentSnippets.allSatisfy(\.isEnabled)
+    }
+    
     var isBeingEdited: Bool {
         editingCollection?.id == collection.id
     }
@@ -332,6 +345,8 @@ struct CollectionCard: View {
         .onTapGesture {
             handleCardTap()
         }
+        // Force refresh when snippets change
+        .id("\(collection.id)-\(snippetManager.snippets.filter { $0.collectionId == collection.id }.map(\.isEnabled).description)")
     }
     
     private var collectionHeader: some View {
@@ -366,36 +381,76 @@ struct CollectionCard: View {
     }
     
     private var collectionActions: some View {
-            HStack(spacing: 8) {
-                Toggle("", isOn: Binding(
-                    get: { currentCollection.isEnabled },
-                    set: { newValue in
-                        if let index = snippetManager.collections.firstIndex(where: { $0.id == collection.id }) {
-                            snippetManager.collections[index].isEnabled = newValue
-                        }
-                    }
-                ))
-                .toggleStyle(CompactToggleStyle())
-                
-                Button("Edit") {
-                    editingCollection = currentCollection
+        HStack(spacing: 8) {
+            Toggle("", isOn: Binding(
+                get: {
+                    let state = effectiveEnabledState
+                    print("DEBUG TOGGLE: Collection '\(currentCollection.name)' effective state: \(state)")
+                    return state
+                },
+                set: { newValue in
+                    print("DEBUG TOGGLE: User toggled collection '\(currentCollection.name)' to: \(newValue)")
+                    toggleCollectionAndSnippets(enabled: newValue)
                 }
-                .font(.system(size: 12))
-                .foregroundColor(.accentColor)
-                .buttonStyle(.plain)
-                
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isExpanded.toggle()
-                    }
-                }) {
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.plain)
+            ))
+            .toggleStyle(CompactToggleStyle())
+            
+            Button("Edit") {
+                editingCollection = currentCollection
             }
+            .font(.system(size: 12))
+            .foregroundColor(.accentColor)
+            .buttonStyle(.plain)
+            
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.plain)
         }
+    }
+    
+    private func toggleCollectionAndSnippets(enabled: Bool) {
+        print("DEBUG COLLECTION TOGGLE: Setting collection '\(currentCollection.name)' to enabled: \(enabled)")
+        
+        // Use withAnimation to ensure smooth UI updates
+        withAnimation(.easeInOut(duration: 0.2)) {
+            // Always update the collection state
+            if let index = snippetManager.collections.firstIndex(where: { $0.id == collection.id }) {
+                snippetManager.collections[index].isEnabled = enabled
+                print("DEBUG COLLECTION TOGGLE: Updated collection isEnabled to \(enabled)")
+            }
+            
+            // Always override ALL snippets in this collection to match the collection state
+            var updatedSnippetsCount = 0
+            for i in snippetManager.snippets.indices {
+                if snippetManager.snippets[i].collectionId == collection.id {
+                    let oldState = snippetManager.snippets[i].isEnabled
+                    snippetManager.snippets[i].isEnabled = enabled
+                    if oldState != enabled {
+                        updatedSnippetsCount += 1
+                    }
+                }
+            }
+            
+            print("DEBUG COLLECTION TOGGLE: Updated \(updatedSnippetsCount) snippets to match collection state")
+        }
+        
+        // Show notification
+        let currentSnippets = snippetManager.snippets.filter { $0.collectionId == collection.id }
+        let message: String
+        if enabled {
+            message = "Enabled \(currentCollection.name) and all \(currentSnippets.count) snippets"
+        } else {
+            message = "Disabled \(currentCollection.name) and all \(currentSnippets.count) snippets"
+        }
+        SaveNotificationManager.shared.show(message)
+    }
     
     private func handleCardTap() {
         // Always set this collection as the editing collection (discarding any unsaved changes)
@@ -422,15 +477,18 @@ struct CollectionCard: View {
     }
     
     private func snippetPreview(_ snippet: Snippet) -> some View {
-        Text(snippet.shortcut)
+        // Get current snippet state from manager
+        let currentSnippet = snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
+        
+        return Text(currentSnippet.shortcut)
             .font(.system(.caption, design: .monospaced))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(getColor(from: currentCollection.color).opacity(0.1))
+                    .fill(getColor(from: currentCollection.color).opacity(currentSnippet.isEnabled ? 0.1 : 0.05))
             )
-            .foregroundColor(getColor(from: currentCollection.color))
+            .foregroundColor(getColor(from: currentCollection.color).opacity(currentSnippet.isEnabled ? 1.0 : 0.5))
     }
     
     @ViewBuilder
@@ -446,8 +504,11 @@ struct CollectionCard: View {
     }
     
     private func expandedSnippetRow(_ snippet: Snippet) -> some View {
-        HStack {
-            Text(snippet.shortcut)
+        // Get current snippet state from manager
+        let currentSnippet = snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
+        
+        return HStack {
+            Text(currentSnippet.shortcut)
                 .font(.system(.caption, design: .monospaced))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -461,7 +522,7 @@ struct CollectionCard: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
             
-            Text(snippet.expansion.replacingOccurrences(of: "\n", with: " "))
+            Text(currentSnippet.expansion.replacingOccurrences(of: "\n", with: " "))
                 .font(.caption)
                 .lineLimit(1)
                 .foregroundColor(.primary)
@@ -469,7 +530,7 @@ struct CollectionCard: View {
             Spacer()
             
             Circle()
-                .fill(snippet.isEnabled ? Color.green : Color.gray)
+                .fill(currentSnippet.isEnabled ? Color.green : Color.gray)
                 .frame(width: 8, height: 8)
         }
         .padding(.horizontal, 8)

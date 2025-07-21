@@ -1,34 +1,14 @@
-//
-//  SoundManager.swift
-//  Archie
-//
-//  Created by Amy Elenius on 21/7/2025.
-//
-
-
 // SoundManager.swift
 
 import Foundation
-import AVFoundation
+import AppKit
+import AudioToolbox
 
 // MARK: - Sound Manager 100200
 class SoundManager: ObservableObject {
     static let shared = SoundManager()
     
-    private var audioPlayer: AVAudioPlayer?
-    
-    private init() {
-        setupAudioSession()
-    }
-    
-    private func setupAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("DEBUG SOUND: Failed to setup audio session: \(error)")
-        }
-    }
+    private init() {}
 }
 
 // MARK: - Available Sounds 100201
@@ -46,6 +26,8 @@ extension SoundManager {
         case purr = "Purr"
         case sosumi = "Sosumi"
         case submarine = "Submarine"
+        case basso = "Basso"
+        case frog = "Frog"
         case none = "None"
         
         var displayName: String {
@@ -66,6 +48,8 @@ extension SoundManager {
             case .purr: return "Purr"
             case .sosumi: return "Sosumi"
             case .submarine: return "Submarine"
+            case .basso: return "Basso"
+            case .frog: return "Frog"
             case .none: return nil
             }
         }
@@ -89,21 +73,28 @@ extension SoundManager {
     }
     
     private func playSystemSound(named soundName: String) {
-        guard let soundURL = Bundle.main.url(forResource: soundName, withExtension: "aiff", subdirectory: "System/Library/Sounds") ??
-              Bundle.main.url(forResource: soundName, withExtension: "aiff") ??
-              getSystemSoundURL(for: soundName) else {
+        // Try to play using NSSound first
+        if let sound = NSSound(named: soundName) {
+            sound.volume = 0.5
+            sound.play()
+            print("DEBUG SOUND: Playing NSSound \(soundName)")
+            return
+        }
+        
+        // Try to find system sound file
+        guard let soundURL = getSystemSoundURL(for: soundName) else {
             print("DEBUG SOUND: Could not find sound file for \(soundName)")
             playAlternativeSound()
             return
         }
         
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-            audioPlayer?.volume = 0.5
-            audioPlayer?.play()
-            print("DEBUG SOUND: Playing sound \(soundName)")
-        } catch {
-            print("DEBUG SOUND: Error playing sound \(soundName): \(error)")
+        // Try to play using NSSound with URL
+        if let sound = NSSound(contentsOf: soundURL, byReference: false) {
+            sound.volume = 0.5
+            sound.play()
+            print("DEBUG SOUND: Playing sound from URL \(soundName)")
+        } else {
+            print("DEBUG SOUND: Failed to create NSSound from URL for \(soundName)")
             playAlternativeSound()
         }
     }
@@ -113,7 +104,8 @@ extension SoundManager {
         let possiblePaths = [
             "/System/Library/Sounds/\(soundName).aiff",
             "/System/Library/Sounds/\(soundName).wav",
-            "/System/Library/Sounds/\(soundName).mp3"
+            "/System/Library/Sounds/\(soundName).mp3",
+            "/System/Library/Sounds/\(soundName).caf"
         ]
         
         for path in possiblePaths {
@@ -127,12 +119,15 @@ extension SoundManager {
     }
     
     private func playAlternativeSound() {
-        // Fallback to system beep
-        NSSound.beep()
+        // Fallback to system beep using AudioToolbox
+        AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_UserPreferredAlert))
     }
     
     func previewSound(_ sound: ExpansionSound) {
-        guard let systemSoundName = sound.systemSoundName else { return }
+        guard let systemSoundName = sound.systemSoundName else {
+            playAlternativeSound()
+            return
+        }
         playSystemSound(named: systemSoundName)
     }
 }

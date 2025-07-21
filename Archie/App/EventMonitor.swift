@@ -34,19 +34,19 @@ extension EventMonitor {
             return
         }
         
-        // Add character to buffer first
+        // Handle space or return BEFORE adding to buffer - potential trigger for space-required snippets
+        if char == " " || char == "\r" || char == "\n" {
+            handleTriggerKey(delimiter: char)
+            return
+        }
+        
+        // Add character to buffer (only for non-space characters)
         if char.count == 1 && !char.isEmpty {
             addCharacterToBuffer(char)
         }
         
         // Check for instant expansion (snippets that don't require space)
         checkForInstantExpansion()
-        
-        // Handle space or return - potential trigger for space-required snippets
-        if char == " " || char == "\r" || char == "\n" {
-            handleTriggerKey(delimiter: char)
-            return
-        }
     }
     
     private func handleBackspaceKey() {
@@ -80,7 +80,7 @@ extension EventMonitor {
                 performTextReplacement(
                     shortcut: snippet.shortcut,
                     expansion: snippet.processedExpansion(),
-                    keepDelimiter: false,
+                    keepDelimiter: snippet.keepDelimiter,
                     delimiter: "",
                     isInstant: true
                 )

@@ -491,6 +491,15 @@ struct ExpandIndicatorView: View {
 struct ExpandedSnippetsView: View {
     let snippets: [Snippet]
     @Binding var editingSnippet: Snippet?
+    @StateObject private var snippetManager = SnippetManager.shared
+    @State private var isDropTarget = false
+    
+    // Get the collection for these snippets
+    private var collection: SnippetCollection? {
+        guard let firstSnippet = snippets.first,
+              let collectionId = firstSnippet.collectionId else { return nil }
+        return snippetManager.collections.first { $0.id == collectionId }
+    }
     
     var body: some View {
         LazyVStack(spacing: 6) {
@@ -506,5 +515,86 @@ struct ExpandedSnippetsView: View {
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isDropTarget ? (collection.map { getColor(from: $0.color) } ?? .blue).opacity(0.05) : Color.clear)
+                .stroke(isDropTarget ? (collection.map { getColor(from: $0.color) } ?? .blue).opacity(0.3) : Color.clear, lineWidth: isDropTarget ? 2 : 0)
+                .animation(.easeInOut(duration: 0.2), value: isDropTarget)
+        )
+        .onDrop(of: [.json], isTargeted: $isDropTarget) { providers in
+            guard let collection = collection else { return false }
+            return handleSnippetDrop(providers: providers, targetCollection: collection)
+        }
+    }
+    
+    private func getColor(from colorName: String) -> Color {
+        switch colorName {
+        case "blue": return .blue
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        case "purple": return .purple
+        case "pink": return .pink
+        case "yellow": return .yellow
+        case "indigo": return .indigo
+        case "teal": return .teal
+        case "mint": return .mint
+        case "cyan": return .cyan
+        case "brown": return .brown
+        case "gray": return .gray
+        case "black": return .black
+        case "white": return Color.white
+        case "accentColor": return .accentColor
+        default: return .blue
+        }
+    }
+    
+    private func handleSnippetDrop(providers: [NSItemProvider], targetCollection: SnippetCollection) -> Bool {
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { item, error in
+                    if error != nil {
+                        return
+                    }
+                    
+                    var data: Data?
+                    
+                    if let directData = item as? Data {
+                        data = directData
+                    } else if let nsData = item as? NSData {
+                        data = nsData as Data
+                    } else if let string = item as? String {
+                        data = string.data(using: .utf8)
+                    } else if let url = item as? URL {
+                        data = try? Data(contentsOf: url)
+                    }
+                    
+                    guard let finalData = data else {
+                        return
+                    }
+                    
+                    do {
+                        let snippet = try JSONDecoder().decode(Snippet.self, from: finalData)
+                        
+                        DispatchQueue.main.async {
+                            moveSnippetToCollection(snippet: snippet, targetCollection: targetCollection)
+                        }
+                    } catch {
+                        return
+                    }
+                }
+                return true
+            }
+        }
+        return false
+    }
+    
+    private func moveSnippetToCollection(snippet: Snippet, targetCollection: SnippetCollection) {
+        if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
+            if snippetManager.snippets[index].collectionId != targetCollection.id {
+                snippetManager.snippets[index].collectionId = targetCollection.id
+                SaveNotificationManager.shared.show("Moved to \(targetCollection.name)")
+            }
+        }
     }
 }
