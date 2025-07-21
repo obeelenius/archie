@@ -47,10 +47,11 @@ struct EditSnippetSlideOut: View {
         }
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
-            if initializedSnippetId != snippet.id {
-                loadSnippetData()
-                initializedSnippetId = snippet.id
-            }
+            loadSnippetDataIfNeeded()
+        }
+        .onChange(of: snippet.id) { oldValue, newValue in
+            print("DEBUG EDIT: Snippet changed from \(oldValue.uuidString) to \(newValue.uuidString)")
+            loadSnippetData()
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -174,14 +175,15 @@ extension EditSnippetSlideOut {
 // MARK: - Trigger Behavior Section 100030
 extension EditSnippetSlideOut {
     private var triggerBehaviorSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 6) {
                 Image(systemName: "keyboard.badge.ellipsis")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                 
                 Text("Trigger Behavior")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
             }
             
             VStack(spacing: 8) {
@@ -193,72 +195,87 @@ extension EditSnippetSlideOut {
                     )
                 }
             }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
     }
 }
 
 // MARK: - Shortcut Section 100031
 extension EditSnippetSlideOut {
     private var shortcutSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 6) {
-                Image(systemName: "pencil")
+                Image(systemName: "keyboard")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                 
-                Text("New Shortcut")
-                    .font(.system(size: 13, weight: .semibold))
+                Text("Shortcut")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
             }
             
-            TextField("Current: \(snippet.shortcut)", text: $shortcut)
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .monospaced))
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(NSColor.textBackgroundColor))
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
-            
-            Text("Edit shortcut or leave unchanged")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Current: \(snippet.shortcut)", text: $shortcut)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.textBackgroundColor))
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                
+                Text("Edit shortcut or leave unchanged")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
     }
 }
 
 // MARK: - Expansion Section 100032
 extension EditSnippetSlideOut {
     private var expansionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 6) {
                 Image(systemName: "text.alignleft")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                 
                 Text("Expansion")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
             }
             
-            expansionEditor
-            
-            Text("Supports line breaks and variables")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-            
-            enhancedVariablesSection
+            VStack(alignment: .leading, spacing: 12) {
+                expansionEditor
+                
+                Text("Supports line breaks and variables")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                
+                enhancedVariablesSection
+            }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+        )
     }
     
     private var expansionEditor: some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
                 .fill(Color(NSColor.textBackgroundColor))
                 .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                 .frame(minHeight: 100)
@@ -364,8 +381,15 @@ extension EditSnippetSlideOut {
 
 // MARK: - Helper Methods 100035
 extension EditSnippetSlideOut {
+    private func loadSnippetDataIfNeeded() {
+        if initializedSnippetId != snippet.id {
+            loadSnippetData()
+            initializedSnippetId = snippet.id
+        }
+    }
+    
     private func loadSnippetData() {
-        print("DEBUG EDIT: Loading data for snippet '\(currentSnippet.shortcut)'")
+        print("DEBUG EDIT: Loading data for snippet '\(currentSnippet.shortcut)' (ID: \(snippet.id.uuidString))")
         print("DEBUG EDIT: Current requiresSpace: \(currentSnippet.requiresSpace)")
         print("DEBUG EDIT: Current keepDelimiter: \(currentSnippet.keepDelimiter)")
         
@@ -382,6 +406,8 @@ extension EditSnippetSlideOut {
         }
         
         print("DEBUG EDIT: Set triggerMode to: \(triggerMode)")
+        print("DEBUG EDIT: Set shortcut to: '\(shortcut)'")
+        print("DEBUG EDIT: Set expansion to: '\(expansion)'")
     }
     
     private func saveChanges() {
@@ -422,7 +448,6 @@ extension EditSnippetSlideOut {
         isShowing = false
     }
 }
-
 // MARK: - Live Example Functions 100036
 extension EditSnippetSlideOut {
     private func getCurrentDateExample() -> String {

@@ -129,8 +129,8 @@ extension AddSnippetSlideOut {
     private var formContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                snippetDetailsSection
                 triggerBehaviorSection
+                snippetDetailsSection
                 expansionSection
                 tipsSection
             }
@@ -181,30 +181,25 @@ extension AddSnippetSlideOut {
                     .foregroundColor(.accentColor)
                     .font(.system(size: 14))
                 
-                Text("Snippet Details")
+                Text("Shortcut")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.primary)
             }
             
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Shortcut")
-                        .font(.system(size: 13, weight: .semibold))
-                    
-                    TextField("e.g., 'addr', '@@'", text: $shortcut)
-                        .textFieldStyle(.plain)
-                        .font(.system(.body, design: .monospaced))
-                        .padding(10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(NSColor.textBackgroundColor))
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                        )
-                    
-                    Text("Type + space to expand")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("e.g., 'addr', '@@'", text: $shortcut)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(NSColor.textBackgroundColor))
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                
+                Text("Type + space to expand")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
         }
         .padding(16)

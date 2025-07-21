@@ -209,7 +209,7 @@ extension SnippetCardView {
 // MARK: - Card Tap Handling 100140
 extension SnippetCardView {
     private func handleCardTap() {
-        // Always set this card as the editing snippet (discarding any unsaved changes)
+        // Always set this snippet as the editing snippet (discarding any unsaved changes)
         editingSnippet = snippet
     }
 }
@@ -296,11 +296,54 @@ extension SnippetCardView {
 
 // MARK: - Styling Properties 100142
 extension SnippetCardView {
+    private var collectionColor: Color {
+        // First try to get collection by ID
+        if let collectionId = currentSnippet.collectionId,
+           let collection = snippetManager.collections.first(where: { $0.id == collectionId }) {
+            print("DEBUG: Found collection '\(collection.name)' with color '\(collection.color)' for snippet '\(currentSnippet.shortcut)'")
+            return getColor(from: collection.color)
+        }
+        
+        // Fallback: try to find collection by checking which snippets belong to it
+        for collection in snippetManager.collections {
+            let snippetsInCollection = snippetManager.snippets(for: collection)
+            if snippetsInCollection.contains(where: { $0.id == currentSnippet.id }) {
+                print("DEBUG: Found snippet '\(currentSnippet.shortcut)' in collection '\(collection.name)' with color '\(collection.color)'")
+                return getColor(from: collection.color)
+            }
+        }
+        
+        print("DEBUG: No collection found for snippet '\(currentSnippet.shortcut)', using default blue")
+        return .blue // Default fallback
+    }
+    
+    private func getColor(from colorName: String) -> Color {
+        switch colorName {
+        case "blue": return .blue
+        case "green": return .green
+        case "red": return .red
+        case "orange": return .orange
+        case "purple": return .purple
+        case "pink": return .pink
+        case "yellow": return .yellow
+        case "indigo": return .indigo
+        case "teal": return .teal
+        case "mint": return .mint
+        case "cyan": return .cyan
+        case "brown": return .brown
+        case "gray": return .gray
+        case "black": return .black
+        case "white": return Color.white
+        case "accentColor": return .accentColor
+        default: return .blue
+        }
+    }
+    
     private var pillBackgroundColor: Color {
         if isBeingEdited {
-            return Color.accentColor
+            return collectionColor
         } else if currentSnippet.isEnabled {
-            return Color.accentColor.opacity(0.15)
+            return collectionColor.opacity(0.15)
         } else {
             return Color.gray.opacity(0.15)
         }
@@ -310,7 +353,7 @@ extension SnippetCardView {
         if isBeingEdited {
             return .white
         } else if currentSnippet.isEnabled {
-            return .accentColor
+            return collectionColor
         } else {
             return .secondary
         }
@@ -318,9 +361,9 @@ extension SnippetCardView {
     
     private var pillBorderColor: Color {
         if isBeingEdited {
-            return Color.accentColor.opacity(0.5)
+            return collectionColor.opacity(0.5)
         } else if currentSnippet.isEnabled {
-            return Color.accentColor.opacity(0.3)
+            return collectionColor.opacity(0.3)
         } else {
             return Color.gray.opacity(0.3)
         }
@@ -328,7 +371,7 @@ extension SnippetCardView {
     
     private var cardBackgroundColor: Color {
         if isBeingEdited {
-            return Color.accentColor.opacity(0.05)
+            return collectionColor.opacity(0.05)
         } else {
             return Color(NSColor.controlBackgroundColor)
         }
@@ -336,7 +379,7 @@ extension SnippetCardView {
     
     private var cardBorderColor: Color {
         if isBeingEdited {
-            return Color.accentColor.opacity(0.5)
+            return collectionColor.opacity(0.5)
         } else {
             return Color(NSColor.separatorColor).opacity(isHovered ? 0.8 : 0.3)
         }

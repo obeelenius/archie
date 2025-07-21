@@ -118,6 +118,19 @@ extension EditCollectionSlideOut {
                 Spacer()
                 
                 HStack(spacing: 8) {
+                    Button("Delete") {
+                        deleteCollection()
+                    }
+                    .foregroundColor(.red)
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                    )
+                    .buttonStyle(.plain)
+                    
                     Button("Cancel") {
                         isShowing = false
                     }
@@ -161,10 +174,10 @@ extension EditCollectionSlideOut {
         ScrollView {
             VStack(spacing: 16) {
                 collectionNameSection
-                iconSelectionSection
-                colorSelectionSection
-                suffixSection
+                collectionSuffixSection
                 delimiterBehaviorSection
+                collectionIconSection
+                collectionColorSection
                 collectionInfoSection
             }
             .padding(16)
@@ -173,52 +186,16 @@ extension EditCollectionSlideOut {
     }
 }
 
-// MARK: - Collection Status Section 100016
-extension EditCollectionSlideOut {
-    private var collectionStatusSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "folder")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
-                
-                Text("Collection Status")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            HStack {
-                Toggle("", isOn: $isEnabled)
-                    .toggleStyle(CompactToggleStyle())
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Enable collection")
-                        .font(.system(size: 12, weight: .medium))
-                    
-                    Text(isEnabled ? "Collection is active" : "Collection is disabled")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
-        }
-    }
-}
-
 // MARK: - Collection Name Section 100017
 extension EditCollectionSlideOut {
     private var collectionNameSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "textformat")
+                Text("Aa")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.accentColor.opacity(0.1)))
                 
                 Text("Collection Name")
                     .font(.system(size: 13, weight: .semibold))
@@ -241,83 +218,16 @@ extension EditCollectionSlideOut {
     }
 }
 
-// MARK: - Icon Selection Section 100018
+// MARK: - Collection Suffix Section 100270
 extension EditCollectionSlideOut {
-    private var iconSelectionSection: some View {
+    private var collectionSuffixSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "app.badge")
+                Text("A₁")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
-                
-                Text("Collection Icon")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            // Current selection preview
-            currentIconPreview
-            
-            // Icon grid by category
-            iconCategoriesGrid
-            
-            Text("Choose an icon to represent this collection")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-        }
-    }
-    
-    private var currentIconPreview: some View {
-        HStack(spacing: 8) {
-            Image(systemName: selectedIcon.isEmpty ? getDefaultIcon(for: name) : selectedIcon)
-                .foregroundColor(.accentColor)
-                .font(.system(size: 16, weight: .medium))
-                .frame(width: 32, height: 32)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.accentColor.opacity(0.1))
-                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
-                )
-            
-            Text("Selected Icon")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.primary)
-            
-            Spacer()
-        }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        )
-    }
-    
-    private var iconCategoriesGrid: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(groupedIcons.keys.sorted()), id: \.self) { category in
-                IconCategorySection(
-                    category: category,
-                    icons: groupedIcons[category] ?? [],
-                    selectedIcon: $selectedIcon
-                )
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.textBackgroundColor))
-                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Suffix Section 100019
-extension EditCollectionSlideOut {
-    private var suffixSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "textformat.subscript")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.accentColor.opacity(0.1)))
                 
                 Text("Collection Suffix")
                     .font(.system(size: 13, weight: .semibold))
@@ -346,8 +256,10 @@ extension EditCollectionSlideOut {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "keyboard.badge.ellipsis")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.accentColor.opacity(0.1)))
                 
                 Text("Delimiter Behavior")
                     .font(.system(size: 13, weight: .semibold))
@@ -382,14 +294,172 @@ extension EditCollectionSlideOut {
     }
 }
 
+// MARK: - Collection Icon Section 100271
+extension EditCollectionSlideOut {
+    private var collectionIconSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "app.badge")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.accentColor.opacity(0.1)))
+                
+                Text("Collection Icon")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            
+            // Current selection preview
+            HStack(spacing: 8) {
+                Image(systemName: selectedIcon.isEmpty ? getDefaultIcon(for: name) : selectedIcon)
+                    .foregroundColor(getColor(from: selectedColor))
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 32, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(getColor(from: selectedColor).opacity(0.1))
+                            .stroke(getColor(from: selectedColor).opacity(0.3), lineWidth: 1)
+                    )
+                
+                Text("Selected Icon")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+            
+            // Icon grid by category
+            iconCategoriesGrid
+            
+            Text("Choose an icon to represent this collection")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private var iconCategoriesGrid: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(groupedIcons.keys.sorted()), id: \.self) { category in
+                IconCategorySection(
+                    category: category,
+                    icons: groupedIcons[category] ?? [],
+                    selectedIcon: $selectedIcon
+                )
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.textBackgroundColor))
+                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Collection Color Section 100272
+extension EditCollectionSlideOut {
+    private var collectionColorSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "paintpalette")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.accentColor.opacity(0.1)))
+                
+                Text("Collection Color")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            
+            // Current color preview
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(getColor(from: selectedColor))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Circle()
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                
+                Text("Selected Color")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+            
+            // Color grid - two rows
+            VStack(spacing: 8) {
+                // First row
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 8), spacing: 8) {
+                    ForEach(Array(availableColors.prefix(8)), id: \.self) { colorName in
+                        colorButton(colorName: colorName)
+                    }
+                }
+                
+                // Second row
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 8), spacing: 8) {
+                    ForEach(Array(availableColors.dropFirst(8)), id: \.self) { colorName in
+                        colorButton(colorName: colorName)
+                    }
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.textBackgroundColor))
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            
+            Text("Choose a color to represent this collection")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private func colorButton(colorName: String) -> some View {
+        Button(action: {
+            selectedColor = colorName
+        }) {
+            Circle()
+                .fill(getColor(from: colorName))
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Circle()
+                        .stroke(selectedColor == colorName ? Color.primary : Color(NSColor.separatorColor), lineWidth: selectedColor == colorName ? 3 : 1)
+                )
+                .overlay(
+                    selectedColor == colorName ?
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.white)
+                        .font(.system(size: 12, weight: .bold))
+                    : nil
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Collection Info Section 100021
 extension EditCollectionSlideOut {
     private var collectionInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "info.circle")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.blue)
-                    .font(.system(size: 12))
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.blue.opacity(0.1)))
                 
                 Text("Collection Info")
                     .font(.system(size: 13, weight: .semibold))
@@ -481,6 +551,29 @@ extension EditCollectionSlideOut {
         }
     }
     
+    private func deleteCollection() {
+        // Prevent deletion of "General" collection
+        if currentCollection.name == "General" {
+            errorMessage = "Cannot delete the General collection."
+            showingError = true
+            return
+        }
+        
+        // Show confirmation alert
+        let alert = NSAlert()
+        alert.messageText = "Delete Collection"
+        alert.informativeText = "Are you sure you want to delete '\(currentCollection.name)'? Any snippets in this collection will be moved to the General collection."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            // User confirmed deletion
+            snippetManager.deleteCollection(currentCollection)
+            isShowing = false
+        }
+    }
+    
     private func saveChanges() {
         let finalName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -554,79 +647,6 @@ struct IconCategorySection: View {
                     .help(icon.name)
                 }
             }
-        }
-    }
-}
-
-// MARK: - Color Selection Section 100025B
-extension EditCollectionSlideOut {
-    private var colorSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "paintpalette")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 12))
-                
-                Text("Collection Color")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            
-            // Current color preview
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(getColor(from: selectedColor))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Circle()
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                    )
-                
-                Text("Selected Color")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
-                
-                Spacer()
-            }
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-            )
-            
-            // Color grid
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 8), spacing: 8) {
-                ForEach(availableColors, id: \.self) { colorName in
-                    Button(action: {
-                        selectedColor = colorName
-                    }) {
-                        Circle()
-                            .fill(getColor(from: colorName))
-                            .frame(width: 32, height: 32)
-                            .overlay(
-                                Circle()
-                                    .stroke(selectedColor == colorName ? Color.primary : Color(NSColor.separatorColor), lineWidth: selectedColor == colorName ? 3 : 1)
-                            )
-                            .overlay(
-                                selectedColor == colorName ?
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.white)
-                                    .font(.system(size: 12, weight: .bold))
-                                : nil
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.textBackgroundColor))
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
-            
-            Text("Choose a color to represent this collection")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
         }
     }
 }
