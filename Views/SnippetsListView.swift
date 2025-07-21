@@ -260,8 +260,8 @@ struct CollectionHeaderView: View {
         .padding(.horizontal, 12)
         .padding(.bottom, isExpanded ? 4 : 6)
         .onDrop(of: [.json], isTargeted: $isDropTarget) { providers in
-                    return handleSnippetDrop(providers: providers)
-                }
+            return handleSnippetDrop(providers: providers)
+        }
     }
     
     private var headerBackground: some View {
@@ -285,25 +285,25 @@ struct CollectionHeaderView: View {
     }
     
     private func handleSnippetDrop(providers: [NSItemProvider]) -> Bool {
-            guard let collection = collection else { return false }
-            
-            for provider in providers {
-                if provider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
-                    provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { data, error in
-                        guard let data = data as? Data,
-                              let snippet = try? JSONDecoder().decode(Snippet.self, from: data) else {
-                            return
-                        }
-                        
-                        DispatchQueue.main.async {
-                            moveSnippetToCollection(snippet: snippet, targetCollection: collection)
-                        }
+        guard let collection = collection else { return false }
+        
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { data, error in
+                    guard let data = data as? Data,
+                          let snippet = try? JSONDecoder().decode(Snippet.self, from: data) else {
+                        return
                     }
-                    return true
+                    
+                    DispatchQueue.main.async {
+                        moveSnippetToCollection(snippet: snippet, targetCollection: collection)
+                    }
                 }
+                return true
             }
-            return false
         }
+        return false
+    }
     
     private func moveSnippetToCollection(snippet: Snippet, targetCollection: SnippetCollection) {
         if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
@@ -504,7 +504,7 @@ struct ExpandedSnippetsView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, 8) // new
+        .padding(.top, 8)
         .padding(.bottom, 12)
     }
 }

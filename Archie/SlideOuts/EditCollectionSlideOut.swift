@@ -507,16 +507,12 @@ extension EditCollectionSlideOut {
     }
     
     private func loadCollectionData() {
-        print("DEBUG EDIT COLLECTION: Loading data for collection '\(currentCollection.name)' (ID: \(currentCollection.id.uuidString))")
-        
         name = currentCollection.name
         suffix = currentCollection.suffix
         keepDelimiter = currentCollection.keepDelimiter
         isEnabled = currentCollection.isEnabled
         selectedIcon = currentCollection.icon
         selectedColor = currentCollection.color
-        
-        print("DEBUG EDIT COLLECTION: Loaded - name: '\(name)', icon: '\(selectedIcon)', color: '\(selectedColor)'")
     }
     
     private func getDefaultIcon(for name: String) -> String {
@@ -577,9 +573,6 @@ extension EditCollectionSlideOut {
     private func saveChanges() {
         let finalName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        print("DEBUG EDIT COLLECTION: Saving changes for collection ID: \(collection.id.uuidString)")
-        print("DEBUG EDIT COLLECTION: Final name: '\(finalName)'")
-        
         // Check for name conflicts with OTHER collections (exclude current collection)
         if snippetManager.collections.contains(where: { $0.name == finalName && $0.id != collection.id }) {
             errorMessage = "A collection with this name already exists."
@@ -588,9 +581,6 @@ extension EditCollectionSlideOut {
         }
         
         if let index = snippetManager.collections.firstIndex(where: { $0.id == collection.id }) {
-            print("DEBUG EDIT COLLECTION: Found collection at index \(index)")
-            print("DEBUG EDIT COLLECTION: Before save - name: '\(snippetManager.collections[index].name)'")
-            
             snippetManager.collections[index].name = finalName
             snippetManager.collections[index].suffix = suffix
             snippetManager.collections[index].keepDelimiter = keepDelimiter
@@ -598,12 +588,8 @@ extension EditCollectionSlideOut {
             snippetManager.collections[index].icon = selectedIcon
             snippetManager.collections[index].color = selectedColor
             
-            print("DEBUG EDIT COLLECTION: After save - name: '\(snippetManager.collections[index].name)'")
-            
             // Trigger save notification
             SaveNotificationManager.shared.show("Collection updated")
-        } else {
-            print("DEBUG EDIT COLLECTION: ERROR - Could not find collection with ID: \(collection.id.uuidString)")
         }
         
         isShowing = false

@@ -1,4 +1,4 @@
-// SnippetManage.swift
+// SnippetManager.swift
 
 import Foundation
 
@@ -35,7 +35,7 @@ class SnippetManager: ObservableObject {
         loadSnippets()
         loadExpandedCollections()
         setupDefaultCollections()
-        fixOrphanedSnippets() // Fix any snippets without collectionId
+        fixOrphanedSnippets()
     }
 }
 
@@ -49,7 +49,6 @@ extension SnippetManager {
             // Ensure existing collections are expanded by default if no expansion state exists
             if expandedCollections.isEmpty {
                 expandedCollections = Set(collections.map { $0.id })
-                print("DEBUG: No expansion state found, expanding all existing collections")
             }
         }
     }
@@ -213,20 +212,13 @@ extension SnippetManager {
 extension SnippetManager {
     func collection(for snippet: Snippet) -> SnippetCollection? {
         guard let collectionId = snippet.collectionId else {
-            print("DEBUG: Snippet '\(snippet.shortcut)' has nil collectionId")
             return nil
         }
-        let collection = collections.first { $0.id == collectionId }
-        if collection == nil {
-            print("DEBUG: Snippet '\(snippet.shortcut)' has collectionId '\(collectionId)' but no matching collection found")
-        }
-        return collection
+        return collections.first { $0.id == collectionId }
     }
     
     func snippets(for collection: SnippetCollection) -> [Snippet] {
-        let collectionSnippets = snippets.filter { $0.collectionId == collection.id }
-        print("DEBUG: Collection '\(collection.name)' has \(collectionSnippets.count) snippets")
-        return collectionSnippets
+        return snippets.filter { $0.collectionId == collection.id }
     }
     
     func getExpansion(for shortcut: String) -> String? {
@@ -251,7 +243,6 @@ extension SnippetManager {
         
         for i in snippets.indices {
             if snippets[i].collectionId == nil {
-                print("DEBUG: Fixing orphaned snippet '\(snippets[i].shortcut)' - assigning to General collection")
                 snippets[i].collectionId = generalCollection.id
             }
         }
@@ -263,7 +254,6 @@ extension SnippetManager {
     private func saveSnippets() {
         if let data = try? JSONEncoder().encode(snippets) {
             UserDefaults.standard.set(data, forKey: "snippets")
-            print("DEBUG SAVE: Saved \(snippets.count) snippets to UserDefaults")
         }
     }
     
@@ -271,14 +261,12 @@ extension SnippetManager {
         if let data = UserDefaults.standard.data(forKey: "snippets"),
            let decoded = try? JSONDecoder().decode([Snippet].self, from: data) {
             snippets = decoded
-            print("DEBUG LOAD: Loaded \(snippets.count) snippets from UserDefaults")
         }
     }
     
     private func saveCollections() {
         if let data = try? JSONEncoder().encode(collections) {
             UserDefaults.standard.set(data, forKey: "collections")
-            print("DEBUG SAVE: Saved \(collections.count) collections to UserDefaults")
         }
     }
     
@@ -286,23 +274,19 @@ extension SnippetManager {
         if let data = UserDefaults.standard.data(forKey: "collections"),
            let decoded = try? JSONDecoder().decode([SnippetCollection].self, from: data) {
             collections = decoded
-            print("DEBUG LOAD: Loaded \(collections.count) collections from UserDefaults")
         }
     }
     
     private func saveExpandedCollections() {
         let expandedArray = Array(expandedCollections).map { $0.uuidString }
         UserDefaults.standard.set(expandedArray, forKey: "expandedCollections")
-        print("DEBUG: Saved expandedCollections: \(expandedArray)")
     }
     
     private func loadExpandedCollections() {
         if let expandedArray = UserDefaults.standard.array(forKey: "expandedCollections") as? [String] {
             expandedCollections = Set(expandedArray.compactMap { UUID(uuidString: $0) })
-            print("DEBUG: Loaded expandedCollections: \(expandedCollections)")
         } else {
             // Default: expand all collections on first launch only
-            print("DEBUG: No saved expansion state, will expand collections as they are created")
             expandedCollections = Set()
         }
     }
@@ -319,7 +303,6 @@ extension SnippetManager {
         saveSnippets()
         saveCollections()
         saveExpandedCollections()
-        print("DEBUG SAVE: Explicitly saved all data to UserDefaults")
     }
 }
 
@@ -350,11 +333,7 @@ extension SnippetManager {
         if let index = snippets.firstIndex(where: { $0.id == snippet.id }) {
             // Only move if it's a different collection
             if snippets[index].collectionId != collection.id {
-                _ = snippets[index].collectionId
                 snippets[index].collectionId = collection.id
-                
-                // Log the move for potential undo functionality
-                print("Moved snippet '\(snippet.shortcut)' to collection '\(collection.name)'")
             }
         }
     }

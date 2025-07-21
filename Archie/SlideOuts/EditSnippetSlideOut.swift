@@ -50,7 +50,6 @@ struct EditSnippetSlideOut: View {
             loadSnippetDataIfNeeded()
         }
         .onChange(of: snippet.id) { oldValue, newValue in
-            print("DEBUG EDIT: Snippet changed from \(oldValue.uuidString) to \(newValue.uuidString)")
             loadSnippetData()
         }
         .alert("Error", isPresented: $showingError) {
@@ -363,20 +362,20 @@ extension EditSnippetSlideOut {
     }
     
     private var componentVariablesGroup: some View {
-            EditEnhancedVariableGroup(
-                title: "🔢 Components",
-                color: .purple,
-                variables: [
-                    EditEnhancedVariableInfo(variable: "{{day}}", title: "Day (Padded)", example: getCurrentDayExample()),
-                    EditEnhancedVariableInfo(variable: "{{day-short}}", title: "Day (Short)", example: getCurrentDayShortExample()),
-                    EditEnhancedVariableInfo(variable: "{{month}}", title: "Month (Padded)", example: getCurrentMonthExample()),
-                    EditEnhancedVariableInfo(variable: "{{month-short}}", title: "Month (Short)", example: getCurrentMonthShortExample()),
-                    EditEnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
-                    EditEnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
-                ],
-                expansion: $expansion
-            )
-        }
+        EditEnhancedVariableGroup(
+            title: "🔢 Components",
+            color: .purple,
+            variables: [
+                EditEnhancedVariableInfo(variable: "{{day}}", title: "Day (Padded)", example: getCurrentDayExample()),
+                EditEnhancedVariableInfo(variable: "{{day-short}}", title: "Day (Short)", example: getCurrentDayShortExample()),
+                EditEnhancedVariableInfo(variable: "{{month}}", title: "Month (Padded)", example: getCurrentMonthExample()),
+                EditEnhancedVariableInfo(variable: "{{month-short}}", title: "Month (Short)", example: getCurrentMonthShortExample()),
+                EditEnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
+                EditEnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
+            ],
+            expansion: $expansion
+        )
+    }
 }
 
 // MARK: - Helper Methods 100035
@@ -389,10 +388,6 @@ extension EditSnippetSlideOut {
     }
     
     private func loadSnippetData() {
-        print("DEBUG EDIT: Loading data for snippet '\(currentSnippet.shortcut)' (ID: \(snippet.id.uuidString))")
-        print("DEBUG EDIT: Current requiresSpace: \(currentSnippet.requiresSpace)")
-        print("DEBUG EDIT: Current keepDelimiter: \(currentSnippet.keepDelimiter)")
-        
         shortcut = currentSnippet.shortcut
         expansion = currentSnippet.expansion
         
@@ -404,23 +399,13 @@ extension EditSnippetSlideOut {
         } else {
             triggerMode = .spaceRequiredConsume
         }
-        
-        print("DEBUG EDIT: Set triggerMode to: \(triggerMode)")
-        print("DEBUG EDIT: Set shortcut to: '\(shortcut)'")
-        print("DEBUG EDIT: Set expansion to: '\(expansion)'")
     }
     
     private func saveChanges() {
         let finalShortcut = shortcut.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        print("DEBUG EDIT: Saving changes for snippet '\(finalShortcut)'")
-        print("DEBUG EDIT: Current triggerMode: \(triggerMode)")
-        
         let newRequiresSpace = (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep)
         let newKeepDelimiter = (triggerMode == .spaceRequiredKeep)
-        
-        print("DEBUG EDIT: Will set requiresSpace to: \(newRequiresSpace)")
-        print("DEBUG EDIT: Will set keepDelimiter to: \(newKeepDelimiter)")
         
         if snippetManager.snippets.contains(where: { $0.shortcut == finalShortcut && $0.id != snippet.id }) {
             errorMessage = "A snippet with this shortcut already exists."
@@ -429,23 +414,16 @@ extension EditSnippetSlideOut {
         }
         
         if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
-            print("DEBUG EDIT: Found snippet at index \(index)")
-            print("DEBUG EDIT: Before save - requiresSpace: \(snippetManager.snippets[index].requiresSpace), keepDelimiter: \(snippetManager.snippets[index].keepDelimiter)")
-            
             snippetManager.snippets[index].shortcut = finalShortcut
             snippetManager.snippets[index].expansion = expansion
             snippetManager.snippets[index].requiresSpace = newRequiresSpace
             snippetManager.snippets[index].keepDelimiter = newKeepDelimiter
-            
-            print("DEBUG EDIT: After save - requiresSpace: \(snippetManager.snippets[index].requiresSpace), keepDelimiter: \(snippetManager.snippets[index].keepDelimiter)")
             
             // Explicitly save to ensure persistence
             snippetManager.saveAllData()
             
             // Trigger save notification
             SaveNotificationManager.shared.show("Snippet updated")
-        } else {
-            print("DEBUG EDIT: ERROR - Could not find snippet to update!")
         }
         
         isShowing = false
@@ -535,38 +513,38 @@ extension EditSnippetSlideOut {
     }
     
     private func getCurrentDayExample() -> String {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "dd"
-            return formatter.string(from: Date())
-        }
-        
-        private func getCurrentDayShortExample() -> String {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "d"
-            return formatter.string(from: Date())
-        }
-        
-        private func getCurrentMonthExample() -> String {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM"
-            return formatter.string(from: Date())
-        }
-        
-        private func getCurrentMonthShortExample() -> String {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "M"
-            return formatter.string(from: Date())
-        }
-        
-        private func getCurrentYearExample() -> String {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy"
-            return formatter.string(from: Date())
-        }
-        
-        private func getCurrentTimestampExample() -> String {
-            return String(Int(Date().timeIntervalSince1970))
-        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd"
+        return formatter.string(from: Date())
+    }
+    
+    private func getCurrentDayShortExample() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: Date())
+    }
+    
+    private func getCurrentMonthExample() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM"
+        return formatter.string(from: Date())
+    }
+    
+    private func getCurrentMonthShortExample() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M"
+        return formatter.string(from: Date())
+    }
+    
+    private func getCurrentYearExample() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
+        return formatter.string(from: Date())
+    }
+    
+    private func getCurrentTimestampExample() -> String {
+        return String(Int(Date().timeIntervalSince1970))
+    }
 }
 
 // MARK: - Enhanced Variable Models 100037

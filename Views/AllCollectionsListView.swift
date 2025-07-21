@@ -34,20 +34,13 @@ struct AllCollectionsListView: View {
     }
     
     private func toggleCollection(_ collectionId: UUID) {
-        print("DEBUG: Toggling collection \(collectionId)")
-        print("DEBUG: Before toggle - expandedCollections: \(snippetManager.expandedCollections)")
-        
         withAnimation(.easeInOut(duration: 0.3)) {
             if snippetManager.expandedCollections.contains(collectionId) {
                 snippetManager.expandedCollections.remove(collectionId)
-                print("DEBUG: Collapsed collection \(collectionId)")
             } else {
                 snippetManager.expandedCollections.insert(collectionId)
-                print("DEBUG: Expanded collection \(collectionId)")
             }
         }
-        
-        print("DEBUG: After toggle - expandedCollections: \(snippetManager.expandedCollections)")
     }
 }
 
@@ -205,102 +198,57 @@ struct AllCollectionsHeaderView: View {
     }
     
     private func handleSnippetDrop(providers: [NSItemProvider]) -> Bool {
-            print("DEBUG DROP: Starting drop handling for collection '\(collection.name)'")
-            print("DEBUG DROP: Number of providers: \(providers.count)")
-            
-            for (index, provider) in providers.enumerated() {
-                print("DEBUG DROP: Provider \(index) registeredTypeIdentifiers: \(provider.registeredTypeIdentifiers)")
-                print("DEBUG DROP: Provider \(index) hasItemConformingToTypeIdentifier(json): \(provider.hasItemConformingToTypeIdentifier(UTType.json.identifier))")
-                
-                if provider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
-                    print("DEBUG DROP: Loading item from provider \(index)")
-                    
-                    provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { item, error in
-                        if let error = error {
-                            print("DEBUG DROP: Error loading item: \(error)")
-                            return
-                        }
-                        
-                        print("DEBUG DROP: Received item of type: \(type(of: item))")
-                        
-                        var data: Data?
-                        
-                        // Handle different possible data types
-                        if let directData = item as? Data {
-                            print("DEBUG DROP: Item is already Data")
-                            data = directData
-                        } else if let nsData = item as? NSData {
-                            print("DEBUG DROP: Item is NSData, converting to Data")
-                            data = nsData as Data
-                        } else if let string = item as? String {
-                            print("DEBUG DROP: Item is String, converting to Data")
-                            data = string.data(using: .utf8)
-                        } else if let url = item as? URL {
-                            print("DEBUG DROP: Item is URL, reading data")
-                            data = try? Data(contentsOf: url)
-                        } else {
-                            print("DEBUG DROP: Unknown item type, cannot convert to Data")
-                            return
-                        }
-                        
-                        guard let finalData = data else {
-                            print("DEBUG DROP: Could not extract Data from item")
-                            return
-                        }
-                        
-                        print("DEBUG DROP: Successfully extracted data of size: \(finalData.count) bytes")
-                        
-                        do {
-                            let snippet = try JSONDecoder().decode(Snippet.self, from: finalData)
-                            print("DEBUG DROP: Successfully decoded snippet '\(snippet.shortcut)'")
-                            
-                            DispatchQueue.main.async {
-                                moveSnippetToCollection(snippet: snippet, targetCollection: collection)
-                            }
-                        } catch {
-                            print("DEBUG DROP: Failed to decode snippet: \(error)")
-                            
-                            // Try to print the raw data as string for debugging
-                            if let dataString = String(data: finalData, encoding: .utf8) {
-                                print("DEBUG DROP: Raw data as string: \(dataString)")
-                            }
-                        }
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.json.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.json.identifier, options: nil) { item, error in
+                    if error != nil {
+                        return
                     }
-                    return true
+                    
+                    var data: Data?
+                    
+                    // Handle different possible data types
+                    if let directData = item as? Data {
+                        data = directData
+                    } else if let nsData = item as? NSData {
+                        data = nsData as Data
+                    } else if let string = item as? String {
+                        data = string.data(using: .utf8)
+                    } else if let url = item as? URL {
+                        data = try? Data(contentsOf: url)
+                    } else {
+                        return
+                    }
+                    
+                    guard let finalData = data else {
+                        return
+                    }
+                    
+                    do {
+                        let snippet = try JSONDecoder().decode(Snippet.self, from: finalData)
+                        
+                        DispatchQueue.main.async {
+                            moveSnippetToCollection(snippet: snippet, targetCollection: collection)
+                        }
+                    } catch {
+                        return
+                    }
                 }
-            }
-            print("DEBUG DROP: No valid JSON data found in any provider")
-            return false
-        }
-        
-        private func moveSnippetToCollection(snippet: Snippet, targetCollection: SnippetCollection) {
-            print("DEBUG MOVE: Attempting to move snippet '\(snippet.shortcut)' to collection '\(targetCollection.name)'")
-            
-            if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
-                let oldCollectionId = snippetManager.snippets[index].collectionId
-                let newCollectionId = targetCollection.id
-                
-                print("DEBUG MOVE: Found snippet at index \(index)")
-                print("DEBUG MOVE: Old collection ID: \(oldCollectionId?.uuidString ?? "nil")")
-                print("DEBUG MOVE: New collection ID: \(newCollectionId.uuidString)")
-                
-                // Only move if it's a different collection
-                if snippetManager.snippets[index].collectionId != targetCollection.id {
-                    snippetManager.snippets[index].collectionId = targetCollection.id
-                    print("DEBUG MOVE: Successfully moved snippet to new collection")
-                    SaveNotificationManager.shared.show("Moved to \(targetCollection.name)")
-                } else {
-                    print("DEBUG MOVE: Snippet is already in target collection")
-                }
-            } else {
-                print("DEBUG MOVE: ERROR - Could not find snippet in snippetManager.snippets")
-                print("DEBUG MOVE: Looking for snippet ID: \(snippet.id.uuidString)")
-                print("DEBUG MOVE: Current snippets count: \(snippetManager.snippets.count)")
-                for (index, existingSnippet) in snippetManager.snippets.enumerated() {
-                    print("DEBUG MOVE: Snippet \(index): \(existingSnippet.shortcut) (\(existingSnippet.id.uuidString))")
-                }
+                return true
             }
         }
+        return false
+    }
+    
+    private func moveSnippetToCollection(snippet: Snippet, targetCollection: SnippetCollection) {
+        if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
+            // Only move if it's a different collection
+            if snippetManager.snippets[index].collectionId != targetCollection.id {
+                snippetManager.snippets[index].collectionId = targetCollection.id
+                SaveNotificationManager.shared.show("Moved to \(targetCollection.name)")
+            }
+        }
+    }
 }
 
 // MARK: - All Collection Icon View 100166

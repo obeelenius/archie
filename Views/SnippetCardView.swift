@@ -37,48 +37,10 @@ struct SnippetCardView: View {
             isHovered = hovering
         }
         .onDrag {
-                    isDragging = true
-                    print("DEBUG DRAG: Starting drag for snippet '\(currentSnippet.shortcut)' (ID: \(currentSnippet.id.uuidString))")
-                    
-                    let dragData = SnippetDragData(snippet: currentSnippet)
-                    print("DEBUG DRAG: Created drag data for snippet")
-                    
-                    return NSItemProvider(object: dragData)
-                }
-    }
-}
-
-// MARK: - Drag Preview 100137A
-extension SnippetCardView {
-    private var dragPreview: some View {
-        HStack(spacing: 8) {
-            Text(currentSnippet.shortcut)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.accentColor)
-                )
-            
-            Image(systemName: "arrow.right")
-                .font(.system(size: 8))
-                .foregroundColor(.secondary)
-            
-            Text(currentSnippet.expansion)
-                .font(.system(size: 10))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .foregroundColor(.primary)
+            isDragging = true
+            let dragData = SnippetDragData(snippet: currentSnippet)
+            return NSItemProvider(object: dragData)
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .stroke(Color.accentColor, lineWidth: 1)
-        )
-        .frame(maxWidth: 200)
     }
 }
 
@@ -138,18 +100,18 @@ extension SnippetCardView {
     }
     
     private var statusIndicators: some View {
-            HStack(spacing: 6) {
-                if currentSnippet.expansion.contains("\n") {
-                    HStack(spacing: 1) {
-                        Image(systemName: "text.alignleft")
-                            .font(.system(size: 6))
-                        Text("Multi-line")
-                            .font(.system(size: 8))
-                    }
-                    .foregroundColor(.secondary)
+        HStack(spacing: 6) {
+            if currentSnippet.expansion.contains("\n") {
+                HStack(spacing: 1) {
+                    Image(systemName: "text.alignleft")
+                        .font(.system(size: 6))
+                    Text("Multi-line")
+                        .font(.system(size: 8))
                 }
+                .foregroundColor(.secondary)
             }
         }
+    }
 }
 
 // MARK: - Action Buttons 100139
@@ -300,7 +262,6 @@ extension SnippetCardView {
         // First try to get collection by ID
         if let collectionId = currentSnippet.collectionId,
            let collection = snippetManager.collections.first(where: { $0.id == collectionId }) {
-            print("DEBUG: Found collection '\(collection.name)' with color '\(collection.color)' for snippet '\(currentSnippet.shortcut)'")
             return getColor(from: collection.color)
         }
         
@@ -308,12 +269,10 @@ extension SnippetCardView {
         for collection in snippetManager.collections {
             let snippetsInCollection = snippetManager.snippets(for: collection)
             if snippetsInCollection.contains(where: { $0.id == currentSnippet.id }) {
-                print("DEBUG: Found snippet '\(currentSnippet.shortcut)' in collection '\(collection.name)' with color '\(collection.color)'")
                 return getColor(from: collection.color)
             }
         }
         
-        print("DEBUG: No collection found for snippet '\(currentSnippet.shortcut)', using default blue")
         return .blue // Default fallback
     }
     
