@@ -213,18 +213,38 @@ extension EventMonitor {
     }
     
     private func insertText(_ text: String) {
-        // Copy to pasteboard and paste
+        print("DEBUG INSERT: About to insert text: '\(text)'")
+        
+        // Save current pasteboard contents
         let pasteboard = NSPasteboard.general
         let originalContents = pasteboard.string(forType: .string)
+        print("DEBUG INSERT: Saved original clipboard: '\(originalContents ?? "nil")'")
         
+        // Clear pasteboard and set our text
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        let success = pasteboard.setString(text, forType: .string)
+        print("DEBUG INSERT: Set clipboard to '\(text)', success: \(success)")
+        
+        // Verify the clipboard was set correctly
+        let verifyText = pasteboard.string(forType: .string)
+        print("DEBUG INSERT: Verified clipboard contains: '\(verifyText ?? "nil")'")
+        
+        // Small delay to ensure clipboard is ready
+        usleep(10000) // 10ms delay
         
         // Simulate Cmd+V
+        print("DEBUG INSERT: Simulating Cmd+V")
         simulatePasteCommand()
         
-        // Restore original pasteboard contents after a delay
-        restoreOriginalPasteboardContents(originalContents)
+        // Restore original pasteboard contents after a longer delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            print("DEBUG INSERT: Restoring original clipboard: '\(originalContents ?? "nil")'")
+            pasteboard.clearContents()
+            if let original = originalContents {
+                pasteboard.setString(original, forType: .string)
+            }
+            print("DEBUG INSERT: Clipboard restoration complete")
+        }
     }
     
     private func simulatePasteCommand() {
@@ -235,16 +255,7 @@ extension EventMonitor {
         cmdVUp?.flags = .maskCommand
         
         cmdVDown?.post(tap: .cghidEventTap)
+        usleep(5000) // 5ms delay between key down and up
         cmdVUp?.post(tap: .cghidEventTap)
-    }
-    
-    private func restoreOriginalPasteboardContents(_ originalContents: String?) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let original = originalContents {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(original, forType: .string)
-            }
-        }
     }
 }

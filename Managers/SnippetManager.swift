@@ -263,6 +263,7 @@ extension SnippetManager {
     private func saveSnippets() {
         if let data = try? JSONEncoder().encode(snippets) {
             UserDefaults.standard.set(data, forKey: "snippets")
+            print("DEBUG SAVE: Saved \(snippets.count) snippets to UserDefaults")
         }
     }
     
@@ -270,12 +271,14 @@ extension SnippetManager {
         if let data = UserDefaults.standard.data(forKey: "snippets"),
            let decoded = try? JSONDecoder().decode([Snippet].self, from: data) {
             snippets = decoded
+            print("DEBUG LOAD: Loaded \(snippets.count) snippets from UserDefaults")
         }
     }
     
     private func saveCollections() {
         if let data = try? JSONEncoder().encode(collections) {
             UserDefaults.standard.set(data, forKey: "collections")
+            print("DEBUG SAVE: Saved \(collections.count) collections to UserDefaults")
         }
     }
     
@@ -283,6 +286,7 @@ extension SnippetManager {
         if let data = UserDefaults.standard.data(forKey: "collections"),
            let decoded = try? JSONDecoder().decode([SnippetCollection].self, from: data) {
             collections = decoded
+            print("DEBUG LOAD: Loaded \(collections.count) collections from UserDefaults")
         }
     }
     
@@ -308,6 +312,14 @@ extension SnippetManager {
         if !expandedCollections.contains(collectionId) {
             expandedCollections.insert(collectionId)
         }
+    }
+    
+    // Add explicit save methods that can be called manually
+    func saveAllData() {
+        saveSnippets()
+        saveCollections()
+        saveExpandedCollections()
+        print("DEBUG SAVE: Explicitly saved all data to UserDefaults")
     }
 }
 

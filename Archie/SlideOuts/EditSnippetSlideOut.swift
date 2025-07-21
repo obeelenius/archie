@@ -439,6 +439,9 @@ extension EditSnippetSlideOut {
             
             print("DEBUG EDIT: After save - requiresSpace: \(snippetManager.snippets[index].requiresSpace), keepDelimiter: \(snippetManager.snippets[index].keepDelimiter)")
             
+            // Explicitly save to ensure persistence
+            snippetManager.saveAllData()
+            
             // Trigger save notification
             SaveNotificationManager.shared.show("Snippet updated")
         } else {
@@ -448,6 +451,7 @@ extension EditSnippetSlideOut {
         isShowing = false
     }
 }
+
 // MARK: - Live Example Functions 100036
 extension EditSnippetSlideOut {
     private func getCurrentDateExample() -> String {
