@@ -2,35 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIconFile</key>
 	<string></string>
-	<key>CFBundleIdentifier</key>
-	<string>com.suede.Archie</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>Archie</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Archie needs to send keystrokes to expand text snippets.</string>
-	<key>NSSystemAdministrationUsageDescription</key>
-	<string>Archie needs accessibility access to monitor keystrokes and expand text snippets across all applications.</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.productivity</string>
 </dict>
 </plist>
