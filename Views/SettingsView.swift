@@ -21,7 +21,7 @@ struct SettingsView: View {
     @State private var showingAddSheet = false
     @State private var showingAddCollectionSheet = false
     @State private var searchText = ""
-    @State private var selectedView: MainView = .snippets
+    @State private var selectedView: MainView = .settings
     @State private var editorWidth: CGFloat = 0.4
     @State private var isDragging = false
     @State private var editingSnippet: Snippet? = nil
@@ -68,7 +68,7 @@ extension SettingsView {
     enum MainView: String, CaseIterable, Identifiable {
         case snippets = "Snippets"
         case collections = "Collections"
-        case general = "General"
+        case settings = "Settings"
         
         var id: String { rawValue }
         
@@ -76,7 +76,7 @@ extension SettingsView {
             switch self {
             case .snippets: return "doc.text"
             case .collections: return "folder"
-            case .general: return "gearshape"
+            case .settings: return "gearshape"
             }
         }
     }
@@ -127,7 +127,7 @@ extension SettingsView {
             )
         case .collections:
             CollectionsContentView(editingCollection: $editingCollection)
-        case .general:
+        case .settings:
             GeneralSettingsContentView()
         }
     }

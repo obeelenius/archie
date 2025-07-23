@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         setupEventMonitoring()
         setupAppIcons()
+        setupMainMenu()
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -94,7 +95,7 @@ extension AppDelegate {
     private func setupMenu() {
         let menu = NSMenu()
         
-        menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
@@ -105,7 +106,7 @@ extension AppDelegate {
         statusBarItem?.menu?.popUp(positioning: nil, at: NSPoint.zero, in: statusBarItem?.button)
     }
     
-    @objc private func openPreferences() {
+    @objc private func openSettings() {
         openSettingsWindow()
     }
 }
@@ -113,23 +114,43 @@ extension AppDelegate {
 // MARK: - Window Management 100077
 extension AppDelegate {
     private func openSettingsWindow() {
+        // Activate the app first
+        NSApp.activate(ignoringOtherApps: true)
+        
         // Look for existing settings window
         for window in NSApp.windows {
             if window.title.contains("Archie Settings") {
                 window.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
                 return
             }
         }
         
-        // If no window found, create new one by opening a new window
-        if (NSApp.windows.first?.windowController) != nil {
-            // Try to open new window
-            NSApp.activate(ignoringOtherApps: true)
-        } else {
-            // Fallback: activate app which should show the window
-            NSApp.activate(ignoringOtherApps: true)
+        // If no window exists, create a new one using NSWindow directly
+        DispatchQueue.main.async {
+            self.createSettingsWindow()
         }
+    }
+    
+    private func createSettingsWindow() {
+        let settingsView = SettingsView()
+        let hostingController = NSHostingController(rootView: settingsView)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Archie Settings"
+        window.contentViewController = hostingController
+        window.center()
+        window.setFrameAutosaveName("ArchieSettings")
+        window.makeKeyAndOrderFront(nil)
+        
+        // Keep a reference to prevent the window from being deallocated
+        // Note: In a production app, you'd want to manage this reference properly
+        objc_setAssociatedObject(self, "settingsWindow", window, .OBJC_ASSOCIATION_RETAIN)
     }
 }
 
@@ -156,5 +177,56 @@ extension AppDelegate {
         if alert.runModal() == .alertFirstButtonReturn {
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
         }
+    }
+}
+
+// MARK: - Main Menu Setup 100079
+extension AppDelegate {
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+        
+        // Archie menu (first menu item)
+        let appMenuItem = NSMenuItem()
+        appMenuItem.title = "Archie"
+        let appMenu = NSMenu(title: "Archie")
+        
+        appMenu.addItem(NSMenuItem(title: "About Archie", action: #selector(showAbout), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        appMenu.addItem(NSMenuItem.separator())
+        
+        // Services submenu
+        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
+        let servicesMenu = NSMenu(title: "Services")
+        appMenu.setSubmenu(servicesMenu, for: servicesItem)
+        appMenu.addItem(servicesItem)
+        NSApp.servicesMenu = servicesMenu
+        
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Hide Archie", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h"))
+        
+        let hideOthersItem = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(hideOthersItem)
+        
+        appMenu.addItem(NSMenuItem(title: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+        
+        // Set the target for menu items that need it
+        for item in appMenu.items {
+            if item.action == #selector(showAbout) || item.action == #selector(openSettings) {
+                item.target = self
+            }
+        }
+        
+        NSApp.mainMenu = mainMenu
+    }
+    
+    @objc private func showAbout() {
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 }

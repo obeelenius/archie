@@ -3,6 +3,43 @@
 import Cocoa
 import Carbon
 
+// MARK: - Event Monitoring Setup 100078
+extension AppDelegate {
+    private func setupEventMonitoring() {
+        eventMonitor = EventMonitor()
+        
+        // Check for accessibility permissions
+        if !AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary) {
+            showPermissionAlert()
+        } else {
+            eventMonitor?.start()
+        }
+    }
+    
+    private func showPermissionAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Accessibility Permission Required"
+        alert.informativeText = """
+        Archie requires accessibility permission to function as a text expansion tool.
+        
+        This permission allows Archie to:
+        • Monitor when you type text shortcuts (like "addr" or "@@")
+        • Automatically replace shortcuts with their full text expansions
+        • Work seamlessly across all applications on your Mac
+        
+        Archie only monitors for your predefined shortcuts and does not store, transmit, or access any other typed content. All text expansion happens locally on your device.
+        
+        Please grant permission in System Settings > Privacy & Security > Accessibility.
+        """
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Cancel")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+        }
+    }
+}
+
 // MARK: - Event Monitor Class 100079
 class EventMonitor: ObservableObject {
     private var monitor: Any?
@@ -172,6 +209,9 @@ extension EventMonitor {
         }
         
         insertText(finalText)
+        
+        // Play sound feedback if enabled
+        SoundManager.shared.playExpansionSound()
     }
     
     private func deleteTypedShortcutAndDelimiter(shortcut: String, delimiter: String) {

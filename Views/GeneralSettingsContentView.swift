@@ -5,7 +5,6 @@ import SwiftUI
 // MARK: - General Settings Content View 100112
 struct GeneralSettingsContentView: View {
     @AppStorage("startAtLogin") private var startAtLogin = false
-    @AppStorage("showNotifications") private var showNotifications = true
     @AppStorage("soundEnabled") private var soundEnabled = false
     @AppStorage("selectedExpansionSound") private var selectedExpansionSound = SoundManager.ExpansionSound.pop.rawValue
     
@@ -14,7 +13,7 @@ struct GeneralSettingsContentView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     startupSection
-                    notificationsSection
+                    audioSection
                     aboutSection
                 }
                 .padding(16)
@@ -22,9 +21,6 @@ struct GeneralSettingsContentView: View {
             .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
         }
         .onChange(of: startAtLogin) { oldValue, newValue in
-            SaveNotificationManager.shared.show("Settings saved")
-        }
-        .onChange(of: showNotifications) { oldValue, newValue in
             SaveNotificationManager.shared.show("Settings saved")
         }
         .onChange(of: soundEnabled) { oldValue, newValue in
@@ -51,18 +47,10 @@ extension GeneralSettingsContentView {
     }
 }
 
-// MARK: - Notifications Section 100114
+// MARK: - Audio Section 100117
 extension GeneralSettingsContentView {
-    private var notificationsSection: some View {
-        SettingsSection(title: "Feedback", icon: "bell") {
-            SettingsRow(
-                title: "Show notifications",
-                subtitle: "Display alerts when snippets are expanded"
-            ) {
-                Toggle("", isOn: $showNotifications)
-                    .toggleStyle(ModernToggleStyle())
-            }
-            
+    private var audioSection: some View {
+        SettingsSection(title: "Audio", icon: "speaker.wave.2") {
             SettingsRow(
                 title: "Play sound",
                 subtitle: "Audio feedback when text is expanded"
@@ -129,9 +117,6 @@ extension GeneralSettingsContentView {
             VStack(alignment: .leading, spacing: 12) {
                 appInfoHeader
                 appDescription
-                Divider()
-                    .padding(.vertical, 8)
-                actionButtons
             }
             .padding(16)
             .background(aboutSectionBackground)
@@ -156,20 +141,6 @@ extension GeneralSettingsContentView {
         Text("Text Expansion Made Simple")
             .font(.subheadline)
             .foregroundColor(.secondary)
-    }
-    
-    private var actionButtons: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button("Check for Updates") {
-                // TODO: Implement update checking
-            }
-            .buttonStyle(.bordered)
-            
-            Button("Send Feedback") {
-                // TODO: Implement feedback
-            }
-            .buttonStyle(.bordered)
-        }
     }
     
     private var aboutSectionBackground: some View {
