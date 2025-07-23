@@ -55,33 +55,41 @@ extension SettingsHeaderView {
     }
     
     private var appIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(
-                    colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(width: 28, height: 28)
-                .shadow(color: Color.accentColor.opacity(0.2), radius: 4, x: 0, y: 2)
-            
-            Image(systemName: "text.cursor")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(
+                        colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 35, height: 35)
+                    .shadow(color: Color.accentColor.opacity(0.2), radius: 4, x: 0, y: 2)
+                
+                if let appIcon = NSImage(named: "AppIcon") {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .frame(width: 28, height: 28)
+                        .cornerRadius(4)
+                } else {
+                    Image(systemName: "text.cursor")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+            }
         }
-    }
-    
+        
     private var appInfo: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text("Archie")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.primary)
-            
-            Text("Text Expansion")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Archie")
+                    .font(.custom("Lora", size: 16))
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text("Text Expansion")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
         }
-    }
 }
 
 // MARK: - Context-Aware Add Button 100128

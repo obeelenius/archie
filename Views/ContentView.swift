@@ -90,17 +90,18 @@ extension ContentView {
     }
     
     private var appTitleSection: some View {
-        VStack(spacing: 8) {
-            Text("Archie")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-            
-            Text("Text Expansion Made Simple")
-                .font(.title3)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Archie")
+                    .font(.custom("Lora", size: 36))
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text("Text Expansion Made Simple")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
-    }
 }
 
 // MARK: - Action Buttons 100119

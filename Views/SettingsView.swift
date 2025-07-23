@@ -21,11 +21,16 @@ struct SettingsView: View {
     @State private var showingAddSheet = false
     @State private var showingAddCollectionSheet = false
     @State private var searchText = ""
-    @State private var selectedView: MainView = .settings
+    @State private var selectedView: MainView
     @State private var editorWidth: CGFloat = 0.4
     @State private var isDragging = false
     @State private var editingSnippet: Snippet? = nil
     @State private var editingCollection: SnippetCollection? = nil
+    
+    // Initialize with a specific tab
+    init(initialSelectedView: MainView = .settings) {
+        self._selectedView = State(initialValue: initialSelectedView)
+    }
     
     var showingEditor: Bool {
         showingAddSheet || showingAddCollectionSheet || editingSnippet != nil || editingCollection != nil
@@ -59,6 +64,11 @@ struct SettingsView: View {
                 editingSnippet = nil
                 showingAddSheet = false
                 showingAddCollectionSheet = false
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToTab"))) { notification in
+                if let tab = notification.object as? MainView {
+                    selectedView = tab
+                }
             }
         }
 }

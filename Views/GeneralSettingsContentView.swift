@@ -124,18 +124,18 @@ extension GeneralSettingsContentView {
     }
     
     private var appInfoHeader: some View {
-        HStack {
-            Text("Archie")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            Spacer()
-            
-            Text("Version 1.0")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("Archie")
+                    .font(.custom("Lora", size: 18))
+                    .fontWeight(.semibold)
+                
+                Spacer()
+                
+                Text("Version 1.0")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
-    }
     
     private var appDescription: some View {
         Text("Text Expansion Made Simple")

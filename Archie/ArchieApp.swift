@@ -17,6 +17,26 @@ struct ArchieApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandGroup(after: .appInfo) {
+                Divider()
+                
+                Button("Snippets") {
+                    appDelegate.openSnippetsView()
+                }
+                .keyboardShortcut("1", modifiers: .command)
+                
+                Button("Collections") {
+                    appDelegate.openCollectionsView()
+                }
+                .keyboardShortcut("2", modifiers: .command)
+                
+                Button("Settings") {
+                    appDelegate.openSettingsWindow()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+                
+                Divider()
+            }
         }
     }
 }
@@ -31,7 +51,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         setupEventMonitoring()
         setupAppIcons()
-        setupMainMenu()
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -78,42 +97,62 @@ extension AppDelegate {
     }
     
     private func configureMenuBarButton(_ button: NSStatusBarButton) {
-        // Use dedicated menu bar icon if available, otherwise fallback to app icon or system symbol
-        if let menuBarIcon = NSImage(named: "MenuBarIcon") {
-            menuBarIcon.size = NSSize(width: 18, height: 18)
-            button.image = menuBarIcon
-        } else if let appIcon = NSImage(named: "AppIcon") {
-            // Create a copy for menu bar with proper size
-            let resizedAppIcon = appIcon.copy() as! NSImage
-            resizedAppIcon.size = NSSize(width: 18, height: 18)
-            button.image = resizedAppIcon
-        } else {
-            button.image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: "Archie")
+            // Use AppIcon asset - it contains all sizes including 16x16 and 32x32 for menu bar
+            if let appIcon = NSImage(named: "AppIcon") {
+                // Create a copy and resize for menu bar
+                let menuBarIcon = appIcon.copy() as! NSImage
+                menuBarIcon.size = NSSize(width: 18, height: 18)
+                button.image = menuBarIcon
+            } else {
+                // Fallback to system symbol if AppIcon not found
+                button.image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: "Archie")
+            }
         }
-    }
     
     private func setupMenu() {
-        let menu = NSMenu()
+            let menu = NSMenu()
+            
+            menu.addItem(NSMenuItem(title: "Snippets", action: #selector(openSnippets), keyEquivalent: "1"))
+            menu.addItem(NSMenuItem(title: "Collections", action: #selector(openCollections), keyEquivalent: "2"))
+            menu.addItem(NSMenuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ","))
+            menu.addItem(NSMenuItem.separator())
+            menu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+            
+            statusBarItem?.menu = menu
+        }
         
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        @objc private func menuBarClicked() {
+            statusBarItem?.menu?.popUp(positioning: nil, at: NSPoint.zero, in: statusBarItem?.button)
+        }
         
-        statusBarItem?.menu = menu
-    }
-    
-    @objc private func menuBarClicked() {
-        statusBarItem?.menu?.popUp(positioning: nil, at: NSPoint.zero, in: statusBarItem?.button)
-    }
-    
-    @objc private func openSettings() {
-        openSettingsWindow()
-    }
+        @objc private func openSnippets() {
+            openSnippetsView()
+        }
+        
+        @objc private func openCollections() {
+            openCollectionsView()
+        }
+        
+        @objc private func openSettings() {
+            openSettingsWindow()
+        }
 }
 
 // MARK: - Window Management 100077
 extension AppDelegate {
-    private func openSettingsWindow() {
+    func openSnippetsView() {
+        openWindow(selectedTab: .snippets)
+    }
+    
+    func openCollectionsView() {
+        openWindow(selectedTab: .collections)
+    }
+    
+    func openSettingsWindow() {
+        openWindow(selectedTab: .settings)
+    }
+    
+    private func openWindow(selectedTab: SettingsView.MainView) {
         // Activate the app first
         NSApp.activate(ignoringOtherApps: true)
         
@@ -121,18 +160,23 @@ extension AppDelegate {
         for window in NSApp.windows {
             if window.title.contains("Archie Settings") {
                 window.makeKeyAndOrderFront(nil)
+                // Send notification to switch tabs
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SwitchToTab"),
+                    object: selectedTab
+                )
                 return
             }
         }
         
-        // If no window exists, create a new one using NSWindow directly
+        // If no window exists, create a new one
         DispatchQueue.main.async {
-            self.createSettingsWindow()
+            self.createSettingsWindow(selectedTab: selectedTab)
         }
     }
     
-    private func createSettingsWindow() {
-        let settingsView = SettingsView()
+    private func createSettingsWindow(selectedTab: SettingsView.MainView) {
+        let settingsView = SettingsView(initialSelectedView: selectedTab)
         let hostingController = NSHostingController(rootView: settingsView)
         
         let window = NSWindow(
@@ -149,7 +193,6 @@ extension AppDelegate {
         window.makeKeyAndOrderFront(nil)
         
         // Keep a reference to prevent the window from being deallocated
-        // Note: In a production app, you'd want to manage this reference properly
         objc_setAssociatedObject(self, "settingsWindow", window, .OBJC_ASSOCIATION_RETAIN)
     }
 }
@@ -170,63 +213,23 @@ extension AppDelegate {
     private func showPermissionAlert() {
         let alert = NSAlert()
         alert.messageText = "Accessibility Permission Required"
-        alert.informativeText = "Archie needs accessibility permission to monitor keystrokes and expand text. Please grant permission in System Preferences > Security & Privacy > Accessibility."
-        alert.addButton(withTitle: "Open System Preferences")
+        alert.informativeText = """
+        Archie requires accessibility permission to function as a text expansion tool.
+        
+        This permission allows Archie to:
+        • Monitor when you type text shortcuts (like "addr" or "@@")
+        • Automatically replace shortcuts with their full text expansions
+        • Work seamlessly across all applications on your Mac
+        
+        Archie only monitors for your predefined shortcuts and does not store, transmit, or access any other typed content. All text expansion happens locally on your device.
+        
+        Please grant permission in System Settings > Privacy & Security > Accessibility.
+        """
+        alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Cancel")
         
         if alert.runModal() == .alertFirstButtonReturn {
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
         }
-    }
-}
-
-// MARK: - Main Menu Setup 100079
-extension AppDelegate {
-    private func setupMainMenu() {
-        let mainMenu = NSMenu()
-        
-        // Archie menu (first menu item)
-        let appMenuItem = NSMenuItem()
-        appMenuItem.title = "Archie"
-        let appMenu = NSMenu(title: "Archie")
-        
-        appMenu.addItem(NSMenuItem(title: "About Archie", action: #selector(showAbout), keyEquivalent: ""))
-        appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
-        appMenu.addItem(NSMenuItem.separator())
-        
-        // Services submenu
-        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
-        let servicesMenu = NSMenu(title: "Services")
-        appMenu.setSubmenu(servicesMenu, for: servicesItem)
-        appMenu.addItem(servicesItem)
-        NSApp.servicesMenu = servicesMenu
-        
-        appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(NSMenuItem(title: "Hide Archie", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h"))
-        
-        let hideOthersItem = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
-        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
-        appMenu.addItem(hideOthersItem)
-        
-        appMenu.addItem(NSMenuItem(title: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: ""))
-        appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(NSMenuItem(title: "Quit Archie", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        
-        appMenuItem.submenu = appMenu
-        mainMenu.addItem(appMenuItem)
-        
-        // Set the target for menu items that need it
-        for item in appMenu.items {
-            if item.action == #selector(showAbout) || item.action == #selector(openSettings) {
-                item.target = self
-            }
-        }
-        
-        NSApp.mainMenu = mainMenu
-    }
-    
-    @objc private func showAbout() {
-        NSApp.orderFrontStandardAboutPanel(nil)
     }
 }
