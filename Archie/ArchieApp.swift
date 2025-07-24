@@ -149,7 +149,7 @@ extension AppDelegate {
     }
     
     func openSettingsWindow() {
-        openWindow(selectedTab: .settings)
+        openWindow(selectedTab: .general)  // Changed from .settings to .general
     }
     
     private func openWindow(selectedTab: SettingsView.MainView) {
@@ -203,33 +203,14 @@ extension AppDelegate {
         eventMonitor = EventMonitor()
         
         // Check for accessibility permissions
-        if !AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary) {
-            showPermissionAlert()
-        } else {
-            eventMonitor?.start()
+        if !AXIsProcessTrusted() {
+            // Request permissions with system prompt - this works perfectly
+            _ = AXIsProcessTrustedWithOptions([
+                kAXTrustedCheckOptionPrompt.takeRetainedValue(): true
+            ] as CFDictionary)
         }
-    }
-    
-    private func showPermissionAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Accessibility Permission Required"
-        alert.informativeText = """
-        Archie requires accessibility permission to function as a text expansion tool.
         
-        This permission allows Archie to:
-        • Monitor when you type text shortcuts (like "addr" or "@@")
-        • Automatically replace shortcuts with their full text expansions
-        • Work seamlessly across all applications on your Mac
-        
-        Archie only monitors for your predefined shortcuts and does not store, transmit, or access any other typed content. All text expansion happens locally on your device.
-        
-        Please grant permission in System Settings > Privacy & Security > Accessibility.
-        """
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Cancel")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-        }
+        // Always start monitoring
+        eventMonitor?.start()
     }
 }

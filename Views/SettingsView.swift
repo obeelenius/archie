@@ -21,14 +21,14 @@ struct SettingsView: View {
     @State private var showingAddSheet = false
     @State private var showingAddCollectionSheet = false
     @State private var searchText = ""
-    @State private var selectedView: MainView
+    @State private var selectedView: MainView = .snippets
     @State private var editorWidth: CGFloat = 0.4
     @State private var isDragging = false
     @State private var editingSnippet: Snippet? = nil
     @State private var editingCollection: SnippetCollection? = nil
     
-    // Initialize with a specific tab
-    init(initialSelectedView: MainView = .settings) {
+    // Add initializer to accept initial selected view
+    init(initialSelectedView: MainView = .snippets) {
         self._selectedView = State(initialValue: initialSelectedView)
     }
     
@@ -48,29 +48,32 @@ struct SettingsView: View {
     }
     
     var body: some View {
-            GeometryReader { geometry in
-                ZStack {
+        GeometryReader { geometry in
+            ZStack {
+                VStack(spacing: 0) {
+                    PermissionBanner()
                     mainLayout(geometry: geometry)
-                    undoToastOverlay
-                    SaveNotificationContainer()
                 }
-            }
-            .frame(minWidth: 600, minHeight: 400)
-            .animation(isDragging ? .none : .easeInOut(duration: 0.3), value: showingEditor)
-            .animation(isDragging ? .none : .easeInOut(duration: 0.2), value: editorWidth)
-            .onChange(of: selectedView) { oldValue, newValue in
-                // Close all editors when navigating between main views
-                editingCollection = nil
-                editingSnippet = nil
-                showingAddSheet = false
-                showingAddCollectionSheet = false
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToTab"))) { notification in
-                if let tab = notification.object as? MainView {
-                    selectedView = tab
-                }
+                undoToastOverlay
+                SaveNotificationContainer()
             }
         }
+        .frame(minWidth: 600, minHeight: 400)
+        .animation(isDragging ? .none : .easeInOut(duration: 0.3), value: showingEditor)
+        .animation(isDragging ? .none : .easeInOut(duration: 0.2), value: editorWidth)
+        .onChange(of: selectedView) { oldValue, newValue in
+            // Close all editors when navigating between main views
+            editingCollection = nil
+            editingSnippet = nil
+            showingAddSheet = false
+            showingAddCollectionSheet = false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToTab"))) { notification in
+            if let newTab = notification.object as? MainView {
+                selectedView = newTab
+            }
+        }
+    }
 }
 
 // MARK: - Main View Enum 100132
@@ -78,7 +81,7 @@ extension SettingsView {
     enum MainView: String, CaseIterable, Identifiable {
         case snippets = "Snippets"
         case collections = "Collections"
-        case settings = "Settings"
+        case general = "General"
         
         var id: String { rawValue }
         
@@ -86,7 +89,7 @@ extension SettingsView {
             switch self {
             case .snippets: return "doc.text"
             case .collections: return "folder"
-            case .settings: return "gearshape"
+            case .general: return "gearshape"
             }
         }
     }
@@ -137,7 +140,7 @@ extension SettingsView {
             )
         case .collections:
             CollectionsContentView(editingCollection: $editingCollection)
-        case .settings:
+        case .general:  // Changed from .settings to .general
             GeneralSettingsContentView()
         }
     }

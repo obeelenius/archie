@@ -399,7 +399,7 @@
 				CODE_SIGN_ENTITLEMENTS = Archie/Archie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = QJQRNAK43D;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -407,9 +407,9 @@
 				INFOPLIST_FILE = Archie/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Archie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Archie needs to send keystrokes to expand text snippets.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Archie uses Apple Events to perform text expansions by simulating keystrokes. This enables automatic replacement of your custom shortcuts (like \"addr\" or \"@@\") with their full text expansions across all applications. No personal data is accessed, stored, or transmitted - all text expansion happens locally on your device.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "Archie needs accessibility access to monitor keystrokes and expand text snippets across all applications.";
+				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "Archie requires accessibility access to monitor your typing for predefined text shortcuts and automatically expand them into full text. This permission allows Archie to detect when you type shortcuts like \"addr\" or \"@@\" and replace them with their expansions. Archie only monitors for your specific shortcuts and does not access, store, or transmit any other typed content. All text expansion processing happens securely on your local device.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.suede.Archie;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -433,7 +433,7 @@
 				CODE_SIGN_ENTITLEMENTS = Archie/Archie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = QJQRNAK43D;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -441,9 +441,9 @@
 				INFOPLIST_FILE = Archie/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Archie;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Archie needs to send keystrokes to expand text snippets.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Archie uses Apple Events to perform text expansions by simulating keystrokes. This enables automatic replacement of your custom shortcuts (like \"addr\" or \"@@\") with their full text expansions across all applications. No personal data is accessed, stored, or transmitted - all text expansion happens locally on your device.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "Archie needs accessibility access to monitor keystrokes and expand text snippets across all applications.";
+				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "Archie requires accessibility access to monitor your typing for predefined text shortcuts and automatically expand them into full text. This permission allows Archie to detect when you type shortcuts like \"addr\" or \"@@\" and replace them with their expansions. Archie only monitors for your specific shortcuts and does not access, store, or transmit any other typed content. All text expansion processing happens securely on your local device.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.suede.Archie;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

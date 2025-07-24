@@ -9,6 +9,7 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            PermissionBanner()
             mainContentArea
         }
         .frame(minWidth: 500, minHeight: 400)

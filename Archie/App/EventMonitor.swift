@@ -47,8 +47,12 @@ class EventMonitor: ObservableObject {
     private let snippetManager = SnippetManager.shared
     
     func start() {
+        // Always try to start the event monitor
         monitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyEvent(event)
+            // Only process events if we have accessibility permissions
+            if AXIsProcessTrusted() {
+                self?.handleKeyEvent(event)
+            }
         }
     }
     
