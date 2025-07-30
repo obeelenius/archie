@@ -40,13 +40,78 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
     }
     
     func updateNSView(_ nsView: NSView, context: Context) {
-        // Update text view content if needed
-        if let textView = context.coordinator.textView {
-            if !textView.attributedString().isEqual(to: attributedText) {
-                textView.textStorage?.setAttributedString(attributedText)
+            // Update text view content if needed
+            if let textView = context.coordinator.textView {
+                let currentText = textView.attributedString()
+                
+                // Only update if there's a significant difference and we're not just resizing
+                // Check if the plain text content is the same - if so, don't recreate attributed text
+                let currentPlainText = currentText.string
+                
+                // Check if we need to update from attributed text (external changes)
+                if !currentText.isEqual(to: attributedText) && attributedText.length > 0 {
+                    // Only update if the plain text is actually different, not just formatting
+                    if currentPlainText != attributedText.string {
+                        textView.textStorage?.setAttributedString(attributedText)
+                        print("DEBUG SYNC: Updated text view from attributedText")
+                    }
+                }
+                // Check if we need to update from plain text (when variables are added)
+                // But only if the current text is significantly different
+                else if currentPlainText != plainText && !plainText.isEmpty {
+                    // If the current text view has rich formatting and the plain text is just
+                    // a substring or superset, don't replace - the user is probably just editing
+                    let hasRichFormatting = hasSignificantFormatting(currentText)
+                    
+                    if !hasRichFormatting || plainText.count < currentPlainText.count * Int(0.5) {
+                        // Only replace if no rich formatting exists, or if text was significantly reduced
+                        let newAttributedText = NSMutableAttributedString(string: plainText)
+                        newAttributedText.addAttributes([
+                            .font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                            .foregroundColor: NSColor.labelColor
+                        ], range: NSRange(location: 0, length: newAttributedText.length))
+                        textView.textStorage?.setAttributedString(newAttributedText)
+                        print("DEBUG SYNC: Updated text view from plainText: '\(plainText)'")
+                    } else {
+                        print("DEBUG SYNC: Skipped update to preserve rich formatting")
+                    }
+                }
             }
         }
-    }
+        
+        // Helper function to detect if text has significant rich formatting
+        private func hasSignificantFormatting(_ attributedString: NSAttributedString) -> Bool {
+            let fullRange = NSRange(location: 0, length: attributedString.length)
+            var hasFormatting = false
+            
+            // Check for paragraph styles (lists)
+            attributedString.enumerateAttribute(.paragraphStyle, in: fullRange, options: []) { value, range, stop in
+                if let paragraphStyle = value as? NSParagraphStyle {
+                    if !paragraphStyle.textLists.isEmpty {
+                        hasFormatting = true
+                        stop.pointee = true
+                    }
+                }
+            }
+            
+            // Check for font variations (bold, italic)
+            attributedString.enumerateAttribute(.font, in: fullRange, options: []) { value, range, stop in
+                if let font = value as? NSFont {
+                    let traits = font.fontDescriptor.symbolicTraits
+                    if traits.contains(.bold) || traits.contains(.italic) {
+                        hasFormatting = true
+                        stop.pointee = true
+                    }
+                }
+            }
+            
+            // Check for other formatting
+            let hasUnderline = attributedString.attribute(.underlineStyle, at: 0, effectiveRange: nil) != nil
+            let hasStrikethrough = attributedString.attribute(.strikethroughStyle, at: 0, effectiveRange: nil) != nil
+            let hasLinks = attributedString.attribute(.link, at: 0, effectiveRange: nil) != nil
+            
+            return hasFormatting || hasUnderline || hasStrikethrough || hasLinks
+        }
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -154,11 +219,12 @@ extension WYSIWYGRichTextEditor {
         textView.textContainer?.containerSize = CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.heightTracksTextView = false
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
         textView.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         
-        // Hide scroll bars
+        // Configure resizing properties - these are NSTextView properties
+        textView.autoresizingMask = [.width]
+        
+        // Hide scroll bars if the text view is in a scroll view
         textView.enclosingScrollView?.hasVerticalScroller = false
         textView.enclosingScrollView?.hasHorizontalScroller = false
         textView.enclosingScrollView?.autohidesScrollers = true
@@ -166,6 +232,14 @@ extension WYSIWYGRichTextEditor {
         // Set initial content with proper attributes
         if attributedText.length > 0 {
             textView.textStorage?.setAttributedString(attributedText)
+        } else if !plainText.isEmpty {
+            // If we have plain text but no attributed text, create attributed text from plain text
+            let newAttributedText = NSMutableAttributedString(string: plainText)
+            newAttributedText.addAttributes([
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                .foregroundColor: NSColor.labelColor
+            ], range: NSRange(location: 0, length: newAttributedText.length))
+            textView.textStorage?.setAttributedString(newAttributedText)
         } else {
             textView.string = ""
             // Set default typing attributes to prevent formatting issues
