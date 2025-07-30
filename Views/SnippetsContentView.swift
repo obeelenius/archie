@@ -50,10 +50,12 @@ struct SnippetsContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            searchAndStatsSection
-            Divider()
-            contentArea
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                searchAndStatsSection(geometry: geometry)
+                Divider()
+                contentArea(geometry: geometry)
+            }
         }
     }
 }
@@ -78,12 +80,15 @@ extension SnippetsContentView {
 
 // MARK: - View Components 100154
 extension SnippetsContentView {
-    private var searchAndStatsSection: some View {
-        SnippetsSearchSection(searchText: $searchText)
+    private func searchAndStatsSection(geometry: GeometryProxy) -> some View {
+        SnippetsSearchSection(
+            searchText: $searchText,
+            availableWidth: geometry.size.width
+        )
     }
     
     @ViewBuilder
-    private var contentArea: some View {
+    private func contentArea(geometry: GeometryProxy) -> some View {
         if snippetManager.collections.isEmpty && uncollectedSnippets.isEmpty {
             EmptyStateView(isSearching: false)
         } else {
@@ -93,7 +98,8 @@ extension SnippetsContentView {
                     if !uncollectedSnippets.isEmpty {
                         UncollectedSnippetsSection(
                             snippets: uncollectedSnippets,
-                            editingSnippet: $editingSnippet
+                            editingSnippet: $editingSnippet,
+                            availableWidth: geometry.size.width
                         )
                     }
                     
@@ -101,7 +107,8 @@ extension SnippetsContentView {
                     AllCollectionsListView(
                         collectionsWithSnippets: allCollectionsWithSnippets,
                         editingSnippet: $editingSnippet,
-                        onCollectionHeaderTapped: onCollectionHeaderTapped
+                        onCollectionHeaderTapped: onCollectionHeaderTapped,
+                        availableWidth: geometry.size.width
                     )
                 }
                 .padding(.vertical, 12)

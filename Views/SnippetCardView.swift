@@ -6,10 +6,17 @@ import SwiftUI
 struct SnippetCardView: View {
     let snippet: Snippet
     @Binding var editingSnippet: Snippet?
+    let isCompact: Bool
     @StateObject private var snippetManager = SnippetManager.shared
     @State private var isHovered: Bool = false
     @State private var isExpanded: Bool = false
     @State private var isDragging: Bool = false
+    
+    init(snippet: Snippet, editingSnippet: Binding<Snippet?>, isCompact: Bool = false) {
+        self.snippet = snippet
+        self._editingSnippet = editingSnippet
+        self.isCompact = isCompact
+    }
     
     private var currentSnippet: Snippet {
         snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
@@ -47,31 +54,32 @@ struct SnippetCardView: View {
 // MARK: - Main Card Content 100138
 extension SnippetCardView {
     private var mainCardContent: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: isCompact ? 6 : 8) {
             shortcutPill
             arrowIndicator
             expansionPreview
             Spacer()
             actionButtons
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 12)
+        .padding(.horizontal, isCompact ? 8 : 10)
+        .padding(.vertical, isCompact ? 10 : 12)
         .background(cardBackground)
     }
     
     private var shortcutPill: some View {
         HStack(spacing: 3) {
             Text(currentSnippet.shortcut)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: isCompact ? 10 : 11, weight: .semibold))
                 .foregroundColor(pillForegroundColor)
+                .lineLimit(1)
             
             if !currentSnippet.requiresSpace {
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 6))
+                    .font(.system(size: isCompact ? 5 : 6))
                     .foregroundColor(pillForegroundColor.opacity(0.7))
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, isCompact ? 5 : 6)
         .padding(.vertical, 3)
         .background(
             RoundedRectangle(cornerRadius: 4)
@@ -82,7 +90,7 @@ extension SnippetCardView {
     
     private var arrowIndicator: some View {
         Image(systemName: "arrow.right")
-            .font(.system(size: 9, weight: .medium))
+            .font(.system(size: isCompact ? 8 : 9, weight: .medium))
             .foregroundColor(.secondary)
             .scaleEffect(isHovered ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isHovered)
@@ -92,10 +100,12 @@ extension SnippetCardView {
         VStack(alignment: .leading, spacing: 1) {
             Text(currentSnippet.expansion.replacingOccurrences(of: "\n", with: " "))
                 .lineLimit(1)
-                .font(.system(size: 11))
+                .font(.system(size: isCompact ? 10 : 11))
                 .foregroundColor(currentSnippet.isEnabled ? .primary : .secondary)
             
-            statusIndicators
+            if !isCompact {
+                statusIndicators
+            }
         }
     }
     
@@ -117,8 +127,10 @@ extension SnippetCardView {
 // MARK: - Action Buttons 100139
 extension SnippetCardView {
     private var actionButtons: some View {
-        HStack(spacing: 4) {
-            expandCollapseButton
+        HStack(spacing: isCompact ? 3 : 4) {
+            if !isCompact {
+                expandCollapseButton
+            }
             enableToggle
         }
     }
@@ -152,18 +164,18 @@ extension SnippetCardView {
             }
         ))
         .toggleStyle(CompactToggleStyle())
-        .scaleEffect(0.8)
+        .scaleEffect(isCompact ? 0.7 : 0.8)
     }
     
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: isCompact ? 5 : 6)
             .fill(cardBackgroundColor)
             .stroke(cardBorderColor, lineWidth: isBeingEdited ? 1.5 : 0.5)
             .shadow(
                 color: cardShadowColor,
                 radius: isHovered || isBeingEdited ? 2 : 1,
                 x: 0,
-                y: isHovered || isBeingEdited ? 1 : 0.5
+                y: isHovered || isBeingEdited ? 1.5 : 0.5
             )
     }
 }
