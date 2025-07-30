@@ -103,7 +103,7 @@ extension WYSIWYGRichTextEditor {
     }
 }
 
-// MARK: - Coordinator Base 100602
+// MARK: - Coordinator Class 100602
 extension WYSIWYGRichTextEditor {
     class Coordinator: NSObject, NSTextViewDelegate {
         let parent: WYSIWYGRichTextEditor
@@ -111,6 +111,7 @@ extension WYSIWYGRichTextEditor {
         
         init(_ parent: WYSIWYGRichTextEditor) {
             self.parent = parent
+            super.init()
         }
         
         func textDidChange(_ notification: Notification) {
@@ -124,14 +125,497 @@ extension WYSIWYGRichTextEditor {
         }
         
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            // Handle Command+K for hyperlinks
+            if commandSelector == #selector(NSResponder.keyDown(with:)) {
+                return false
+            }
+            
             // Handle Enter key press for auto-continuing lists
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 return handleNewlineInsertion(textView)
             }
             return false
         }
+        
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            // Handle Command+K shortcut
+            if let event = NSApp.currentEvent,
+               event.type == .keyDown,
+               event.modifierFlags.contains(.command),
+               event.charactersIgnoringModifiers == "k" {
+                showHyperlinkDialog()
+                return false
+            }
+            
+            // Check if user is pasting a URL when text is selected
+            guard let replacementString = replacementString,
+                  affectedCharRange.length > 0,
+                  isValidURL(replacementString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                return true
+            }
+            
+            // User is pasting a URL over selected text - create hyperlink
+            let selectedText = (textView.string as NSString).substring(with: affectedCharRange)
+            createHyperlink(text: selectedText, url: replacementString.trimmingCharacters(in: .whitespacesAndNewlines), range: affectedCharRange)
+            
+            // Update parent binding
+            parent.attributedText = textView.attributedString()
+            parent.plainText = textView.attributedString().string
+            
+            return false // We handled the change
+        }
+        
+        // MARK: - Image Pasting Support
+        private func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementString: String?) -> Bool {
+            // Check if pasteboard contains an image
+            let pasteboard = NSPasteboard.general
+            
+            if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue]) {
+                // Handle image paste
+                handleImagePaste(textView: textView, affectedRanges: affectedRanges)
+                return false // We handled the paste
+            }
+            
+            return true // Let the system handle normal text paste
+        }
+        
+        private func handleImagePaste(textView: NSTextView, affectedRanges: [NSValue]) {
+            let pasteboard = NSPasteboard.general
+            
+            // Try to get image data from pasteboard
+            var imageData: Data?
+            var imageType = "png"
+            
+            if let tiffData = pasteboard.data(forType: .tiff) {
+                // Convert TIFF to PNG for better compatibility
+                if let image = NSImage(data: tiffData),
+                   let pngData = image.pngData() {
+                    imageData = pngData
+                    imageType = "png"
+                }
+            } else if let pngData = pasteboard.data(forType: .png) {
+                imageData = pngData
+                imageType = "png"
+            }
+            
+            guard let data = imageData else { return }
+            
+            // Save image to temporary location or app support directory
+            if let savedImagePath = saveImageToAppDirectory(data: data, type: imageType) {
+                // Insert image reference at paste location
+                let insertionRange = affectedRanges.first?.rangeValue ?? NSRange(location: textView.selectedRange().location, length: 0)
+                insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView)
+            }
+        }
+        
+        private func saveImageToAppDirectory(data: Data, type: String) -> String? {
+            // Create images directory in app support
+            guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                return nil
+            }
+            
+            let archieDir = appSupportDir.appendingPathComponent("Archie")
+            let imagesDir = archieDir.appendingPathComponent("Images")
+            
+            // Create directories if they don't exist
+            try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+            
+            // Generate unique filename
+            let filename = "image_\(UUID().uuidString).\(type)"
+            let imageURL = imagesDir.appendingPathComponent(filename)
+            
+            do {
+                try data.write(to: imageURL)
+                return imageURL.path
+            } catch {
+                print("Failed to save image: \(error)")
+                return nil
+            }
+        }
+        
+        private func insertImageReference(at range: NSRange, imagePath: String, textView: NSTextView) {
+            // Create image attachment
+            let attachment = NSTextAttachment()
+            
+            // Load and resize image for display
+            if let image = NSImage(contentsOfFile: imagePath) {
+                // Resize image to reasonable size for text editor
+                let maxWidth: CGFloat = 300
+                let maxHeight: CGFloat = 200
+                
+                let imageSize = image.size
+                var newSize = imageSize
+                
+                if imageSize.width > maxWidth || imageSize.height > maxHeight {
+                    let widthRatio = maxWidth / imageSize.width
+                    let heightRatio = maxHeight / imageSize.height
+                    let ratio = min(widthRatio, heightRatio)
+                    
+                    newSize = CGSize(width: imageSize.width * ratio, height: imageSize.height * ratio)
+                }
+                
+                // Create resized image
+                let resizedImage = NSImage(size: newSize)
+                resizedImage.lockFocus()
+                image.draw(in: NSRect(origin: .zero, size: newSize))
+                resizedImage.unlockFocus()
+                
+                attachment.image = resizedImage
+            }
+            
+            // Store file path in attachment for later reference
+            attachment.fileWrapper = FileWrapper(regularFileWithContents: Data())
+            attachment.fileWrapper?.filename = imagePath
+            
+            // Create attributed string with attachment
+            let attachmentString = NSAttributedString(attachment: attachment)
+            
+            // Insert the image
+            textView.textStorage?.replaceCharacters(in: range, with: attachmentString)
+            
+            // Update parent binding
+            parent.attributedText = textView.attributedString()
+            parent.plainText = textView.attributedString().string
+        }
+        
+        private func isValidURL(_ string: String) -> Bool {
+            // Check if string is a valid URL
+            if let url = URL(string: string) {
+                return url.scheme != nil && (url.scheme == "http" || url.scheme == "https" || url.scheme == "mailto" || url.scheme == "ftp")
+            }
+            
+            // Check if it's a URL without scheme
+            if string.contains(".") && (string.hasPrefix("www.") || string.contains("@")) {
+                return true
+            }
+            
+            return false
+        }
+        
+        private func createHyperlink(text: String, url: String, range: NSRange) {
+            guard let textView = textView else { return }
+            
+            // Ensure URL has a scheme
+            var finalURL = url
+            if !url.hasPrefix("http://") && !url.hasPrefix("https://") && !url.hasPrefix("mailto:") {
+                if url.contains("@") {
+                    finalURL = "mailto:\(url)"
+                } else {
+                    finalURL = "https://\(url)"
+                }
+            }
+            
+            // Create attributed string with link
+            let linkAttributes: [NSAttributedString.Key: Any] = [
+                .link: finalURL,
+                .foregroundColor: NSColor.systemBlue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            ]
+            
+            let linkAttributedString = NSAttributedString(string: text, attributes: linkAttributes)
+            
+            // Replace the text with the hyperlink
+            textView.textStorage?.replaceCharacters(in: range, with: linkAttributedString)
+        }
+        
+        private func showHyperlinkDialog() {
+            guard let textView = textView else { return }
+            
+            let selectedRange = textView.selectedRange()
+            guard selectedRange.length > 0 else {
+                // No text selected, show alert
+                showNoTextSelectedAlert()
+                return
+            }
+            
+            let selectedText = (textView.string as NSString).substring(with: selectedRange)
+            
+            // Show URL input dialog
+            showURLInputDialog(for: selectedText, range: selectedRange)
+        }
+        
+        private func showNoTextSelectedAlert() {
+            let alert = NSAlert()
+            alert.messageText = "No Text Selected"
+            alert.informativeText = "Please select the text you want to turn into a hyperlink first."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+        
+        private func showURLInputDialog(for text: String, range: NSRange) {
+            let alert = NSAlert()
+            alert.messageText = "Add Hyperlink"
+            alert.informativeText = "Enter the URL for '\(text)'"
+            alert.alertStyle = .informational
+            
+            // Create input field
+            let inputField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            inputField.placeholderString = "https://example.com"
+            alert.accessoryView = inputField
+            
+            alert.addButton(withTitle: "Add Link")
+            alert.addButton(withTitle: "Cancel")
+            
+            // Focus the input field
+            alert.window.initialFirstResponder = inputField
+            
+            let response = alert.runModal()
+            
+            if response == .alertFirstButtonReturn {
+                let urlString = inputField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if !urlString.isEmpty {
+                    if isValidURL(urlString) || urlString.contains(".") {
+                        createHyperlink(text: text, url: urlString, range: range)
+                        
+                        // Update parent binding
+                        parent.attributedText = textView?.attributedString() ?? NSAttributedString()
+                        parent.plainText = textView?.attributedString().string ?? ""
+                    } else {
+                        showInvalidURLAlert()
+                    }
+                }
+            }
+        }
+        
+        private func showInvalidURLAlert() {
+            let alert = NSAlert()
+            alert.messageText = "Invalid URL"
+            alert.informativeText = "Please enter a valid URL (e.g., https://example.com)"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
 }
+        
+        // MARK: - Image Pasting Support
+        private func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementString: String?) -> Bool {
+            // Check if pasteboard contains an image
+            let pasteboard = NSPasteboard.general
+            
+            if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue]) {
+                // Handle image paste
+                handleImagePaste(textView: textView, affectedRanges: affectedRanges)
+                return false // We handled the paste
+            }
+            
+            return true // Let the system handle normal text paste
+        }
+        
+        private func handleImagePaste(textView: NSTextView, affectedRanges: [NSValue]) {
+            let pasteboard = NSPasteboard.general
+            
+            // Try to get image data from pasteboard
+            var imageData: Data?
+            var imageType = "png"
+            
+            if let tiffData = pasteboard.data(forType: .tiff) {
+                // Convert TIFF to PNG for better compatibility
+                if let image = NSImage(data: tiffData),
+                   let pngData = image.pngData() {
+                    imageData = pngData
+                    imageType = "png"
+                }
+            } else if let pngData = pasteboard.data(forType: .png) {
+                imageData = pngData
+                imageType = "png"
+            }
+            
+            guard let data = imageData else { return }
+            
+            // Save image to temporary location or app support directory
+            if let savedImagePath = saveImageToAppDirectory(data: data, type: imageType) {
+                // Insert image reference at paste location
+                let insertionRange = affectedRanges.first?.rangeValue ?? NSRange(location: textView.selectedRange().location, length: 0)
+                insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView)
+            }
+        }
+        
+        private func saveImageToAppDirectory(data: Data, type: String) -> String? {
+            // Create images directory in app support
+            guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                return nil
+            }
+            
+            let archieDir = appSupportDir.appendingPathComponent("Archie")
+            let imagesDir = archieDir.appendingPathComponent("Images")
+            
+            // Create directories if they don't exist
+            try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+            
+            // Generate unique filename
+            let filename = "image_\(UUID().uuidString).\(type)"
+            let imageURL = imagesDir.appendingPathComponent(filename)
+            
+            do {
+                try data.write(to: imageURL)
+                return imageURL.path
+            } catch {
+                print("Failed to save image: \(error)")
+                return nil
+            }
+        }
+        
+        private func insertImageReference(at range: NSRange, imagePath: String, textView: NSTextView) {
+            // Create image attachment
+            let attachment = NSTextAttachment()
+            
+            // Load and resize image for display
+            if let image = NSImage(contentsOfFile: imagePath) {
+                // Resize image to reasonable size for text editor
+                let maxWidth: CGFloat = 300
+                let maxHeight: CGFloat = 200
+                
+                let imageSize = image.size
+                var newSize = imageSize
+                
+                if imageSize.width > maxWidth || imageSize.height > maxHeight {
+                    let widthRatio = maxWidth / imageSize.width
+                    let heightRatio = maxHeight / imageSize.height
+                    let ratio = min(widthRatio, heightRatio)
+                    
+                    newSize = CGSize(width: imageSize.width * ratio, height: imageSize.height * ratio)
+                }
+                
+                // Create resized image
+                let resizedImage = NSImage(size: newSize)
+                resizedImage.lockFocus()
+                image.draw(in: NSRect(origin: .zero, size: newSize))
+                resizedImage.unlockFocus()
+                
+                attachment.image = resizedImage
+            }
+            
+            // Store file path in attachment for later reference
+            attachment.fileWrapper = FileWrapper(regularFileWithContents: Data())
+            attachment.fileWrapper?.filename = imagePath
+            
+            // Create attributed string with attachment
+            let attachmentString = NSAttributedString(attachment: attachment)
+            
+            // Insert the image
+            textView.textStorage?.replaceCharacters(in: range, with: attachmentString)
+            
+            // Update parent binding
+            parent.attributedText = textView.attributedString()
+            parent.plainText = textView.attributedString().string
+        }
+        
+        private func isValidURL(_ string: String) -> Bool {
+            // Check if string is a valid URL
+            if let url = URL(string: string) {
+                return url.scheme != nil && (url.scheme == "http" || url.scheme == "https" || url.scheme == "mailto" || url.scheme == "ftp")
+            }
+            
+            // Check if it's a URL without scheme
+            if string.contains(".") && (string.hasPrefix("www.") || string.contains("@")) {
+                return true
+            }
+            
+            return false
+        }
+        
+        private func createHyperlink(text: String, url: String, range: NSRange) {
+            guard let textView = textView else { return }
+            
+            // Ensure URL has a scheme
+            var finalURL = url
+            if !url.hasPrefix("http://") && !url.hasPrefix("https://") && !url.hasPrefix("mailto:") {
+                if url.contains("@") {
+                    finalURL = "mailto:\(url)"
+                } else {
+                    finalURL = "https://\(url)"
+                }
+            }
+            
+            // Create attributed string with link
+            let linkAttributes: [NSAttributedString.Key: Any] = [
+                .link: finalURL,
+                .foregroundColor: NSColor.systemBlue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            ]
+            
+            let linkAttributedString = NSAttributedString(string: text, attributes: linkAttributes)
+            
+            // Replace the text with the hyperlink
+            textView.textStorage?.replaceCharacters(in: range, with: linkAttributedString)
+        }
+        
+        private func showHyperlinkDialog() {
+            guard let textView = textView else { return }
+            
+            let selectedRange = textView.selectedRange()
+            guard selectedRange.length > 0 else {
+                // No text selected, show alert
+                showNoTextSelectedAlert()
+                return
+            }
+            
+            let selectedText = (textView.string as NSString).substring(with: selectedRange)
+            
+            // Show URL input dialog
+            showURLInputDialog(for: selectedText, range: selectedRange)
+        }
+        
+        private func showNoTextSelectedAlert() {
+            let alert = NSAlert()
+            alert.messageText = "No Text Selected"
+            alert.informativeText = "Please select the text you want to turn into a hyperlink first."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+        
+        private func showURLInputDialog(for text: String, range: NSRange) {
+            let alert = NSAlert()
+            alert.messageText = "Add Hyperlink"
+            alert.informativeText = "Enter the URL for '\(text)'"
+            alert.alertStyle = .informational
+            
+            // Create input field
+            let inputField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            inputField.placeholderString = "https://example.com"
+            alert.accessoryView = inputField
+            
+            alert.addButton(withTitle: "Add Link")
+            alert.addButton(withTitle: "Cancel")
+            
+            // Focus the input field
+            alert.window.initialFirstResponder = inputField
+            
+            let response = alert.runModal()
+            
+            if response == .alertFirstButtonReturn {
+                let urlString = inputField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if !urlString.isEmpty {
+                    if isValidURL(urlString) || urlString.contains(".") {
+                        createHyperlink(text: text, url: urlString, range: range)
+                        
+                        // Update parent binding
+                        parent.attributedText = textView.attributedString() ?? NSAttributedString()
+                        parent.plainText = textView.attributedString().string ?? ""
+                    } else {
+                        showInvalidURLAlert()
+                    }
+                }
+            }
+        }
+        
+        private func showInvalidURLAlert() {
+            let alert = NSAlert()
+            alert.messageText = "Invalid URL"
+            alert.informativeText = "Please enter a valid URL (e.g., https://example.com)"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+
+
 
 // MARK: - Newline Handling 100603
 extension WYSIWYGRichTextEditor.Coordinator {
@@ -404,30 +888,49 @@ extension WYSIWYGRichTextEditor.Coordinator {
         let selectedRange = textView.selectedRange()
         
         if selectedRange.length > 0 {
-            let selectedText = textView.attributedString().attributedSubstring(from: selectedRange)
-            let linkText = "[\(selectedText.string)](url)"
-            textView.insertText(linkText, replacementRange: selectedRange)
+            // Text is selected - show URL input dialog
+            let selectedText = (textView.string as NSString).substring(with: selectedRange)
+            showURLInputDialog(for: selectedText, range: selectedRange)
         } else {
+            // No text selected - insert placeholder link
             let linkText = "[link text](url)"
             textView.insertText(linkText, replacementRange: selectedRange)
+            
+            // Update parent binding
+            parent.attributedText = textView.attributedString()
+            parent.plainText = textView.attributedString().string
         }
-        
-        // Update parent binding
-        parent.attributedText = textView.attributedString()
-        parent.plainText = textView.attributedString().string
     }
     
     func insertImage() {
         guard let textView = textView else { return }
         
-        let currentRange = textView.selectedRange()
-        let imageText = "![image description](image-url)"
+        let selectedRange = textView.selectedRange()
         
-        textView.insertText(imageText, replacementRange: currentRange)
+        // Show file picker to select image
+        showImageFilePicker(insertionRange: selectedRange)
+    }
+    
+    private func showImageFilePicker(insertionRange: NSRange) {
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Select Image"
+        openPanel.message = "Choose an image to insert into your snippet"
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.allowedContentTypes = [.image, .png, .jpeg, .gif, .tiff, .bmp, .heic, .webP]
         
-        // Update parent binding
-        parent.attributedText = textView.attributedString()
-        parent.plainText = textView.attributedString().string
+        if openPanel.runModal() == .OK {
+            guard let selectedURL = openPanel.url else { return }
+            
+            // Copy image to app directory and insert reference
+            if let imageData = try? Data(contentsOf: selectedURL) {
+                let fileExtension = selectedURL.pathExtension.lowercased()
+                if let savedImagePath = saveImageToAppDirectory(data: imageData, type: fileExtension.isEmpty ? "png" : fileExtension) {
+                    insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView!)
+                }
+            }
+        }
     }
     
     // Helper methods for list insertion
@@ -575,5 +1078,16 @@ extension WYSIWYGRichTextEditor.Coordinator {
         }
         
         return cleanedLine
+    }
+}
+
+// MARK: - NSImage Extension for PNG Data 100606
+extension NSImage {
+    func pngData() -> Data? {
+        guard let tiffData = self.tiffRepresentation,
+              let bitmapImage = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+        return bitmapImage.representation(using: .png, properties: [:])
     }
 }
