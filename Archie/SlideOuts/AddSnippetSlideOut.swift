@@ -8,11 +8,17 @@ struct AddSnippetSlideOut: View {
     @Binding var isShowing: Bool
     @StateObject private var snippetManager = SnippetManager.shared
     
-    @State private var shortcut = ""
-    @State private var expansion = ""
-    @State private var triggerMode: TriggerMode = .spaceRequiredConsume
+    // Use AppStorage for persistence across app lifecycle
+    @AppStorage("draft_shortcut") private var shortcut = ""
+    @AppStorage("draft_expansion") private var expansion = ""
+    @AppStorage("draft_trigger_mode") private var triggerModeRaw = TriggerMode.instant.rawValue
     @State private var showingError = false
     @State private var errorMessage = ""
+    
+    private var triggerMode: TriggerMode {
+        get { TriggerMode(rawValue: triggerModeRaw) ?? .instant }
+        set { triggerModeRaw = newValue.rawValue }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -113,6 +119,21 @@ extension AddSnippetSlideOut {
                             .fill((shortcut.isEmpty || expansion.isEmpty) ? Color.gray : Color.accentColor)
                     )
                     .buttonStyle(.plain)
+                    
+                    if !shortcut.isEmpty || !expansion.isEmpty {
+                        Button("Clear") {
+                            clearDraftData()
+                        }
+                        .foregroundColor(.orange)
+                        .font(.system(size: 12))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        )
+                        .buttonStyle(.plain)
+                    }
                 }
             }
             
@@ -130,8 +151,7 @@ extension AddSnippetSlideOut {
         ScrollView {
             VStack(spacing: 20) {
                 triggerBehaviorSection
-                snippetDetailsSection
-                expansionSection
+                snippetDetailsSection // Combined shortcut and expansion
                 tipsSection
             }
             .padding(16)
@@ -159,7 +179,9 @@ extension AddSnippetSlideOut {
                     AddTriggerModeRow(
                         mode: mode,
                         isSelected: triggerMode == mode,
-                        onSelect: { triggerMode = mode }
+                        onSelect: {
+                            triggerModeRaw = mode.rawValue
+                        }
                     )
                 }
             }
@@ -175,18 +197,24 @@ extension AddSnippetSlideOut {
 // MARK: - Snippet Details Section 100060
 extension AddSnippetSlideOut {
     private var snippetDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
+            // Section header
             HStack(spacing: 6) {
                 Image(systemName: "keyboard")
                     .foregroundColor(.accentColor)
                     .font(.system(size: 14))
                 
-                Text("Shortcut")
+                Text("Snippet Details")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.primary)
             }
             
+            // Shortcut field
             VStack(alignment: .leading, spacing: 8) {
+                Text("Shortcut")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                
                 TextField("e.g., 'addr', '@@'", text: $shortcut)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
@@ -201,30 +229,13 @@ extension AddSnippetSlideOut {
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-}
-
-// MARK: - Expansion Section 100061
-extension AddSnippetSlideOut {
-    private var expansionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 6) {
-                Image(systemName: "text.alignleft")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 14))
-                
-                Text("Expansion")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.primary)
-            }
             
+            // Expansion field
             VStack(alignment: .leading, spacing: 12) {
+                Text("Expansion")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                
                 expansionEditor
                 
                 Text("Supports line breaks and variables")
@@ -392,23 +403,31 @@ extension AddSnippetSlideOut {
             return
         }
         
-        // Find the General collection (or first collection as fallback)
-        let generalCollection = snippetManager.collections.first { $0.name == "General" } ?? snippetManager.collections.first
-        
+        // Create snippet without assigning to any collection
         let newSnippet = Snippet(
             shortcut: shortcut.trimmingCharacters(in: .whitespacesAndNewlines),
             expansion: expansion,
             requiresSpace: (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep),
             keepDelimiter: (triggerMode == .spaceRequiredKeep),
-            collectionId: generalCollection?.id
+            collectionId: nil // No collection assignment
         )
         
         snippetManager.addSnippet(newSnippet)
         
+        // Clear both state and persistent storage
+        clearDraftData()
+        isShowing = false
+    }
+    
+    private func clearDraftData() {
         shortcut = ""
         expansion = ""
-        triggerMode = .spaceRequiredConsume
-        isShowing = false
+        triggerModeRaw = TriggerMode.instant.rawValue
+        
+        // Clear AppStorage
+        UserDefaults.standard.removeObject(forKey: "draft_shortcut")
+        UserDefaults.standard.removeObject(forKey: "draft_expansion")
+        UserDefaults.standard.removeObject(forKey: "draft_trigger_mode")
     }
 }
 

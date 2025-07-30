@@ -79,6 +79,9 @@ extension SnippetManager {
         dateCollection: SnippetCollection,
         contactCollection: SnippetCollection
     ) {
+        // Only create default snippets if there are no snippets at all
+        guard snippets.isEmpty else { return }
+        
         let defaultSnippets = [
             // Contact collection snippets
             Snippet(shortcut: "@@", expansion: "your@email.com", collectionId: contactCollection.id),
@@ -233,19 +236,22 @@ extension SnippetManager {
                 }
             }
         }
+        
+        // Also check uncollected snippets
+        let uncollectedSnippets = snippets.filter { $0.collectionId == nil && $0.isEnabled }
+        for snippet in uncollectedSnippets {
+            if snippet.shortcut == shortcut {
+                return snippet.processedExpansion()
+            }
+        }
+        
         return nil
     }
     
-    // Add a method to fix orphaned snippets
+    // Remove auto-assignment to General collection
     func fixOrphanedSnippets() {
-        let generalCollection = collections.first { $0.name == "General" }
-        guard let generalCollection = generalCollection else { return }
-        
-        for i in snippets.indices {
-            if snippets[i].collectionId == nil {
-                snippets[i].collectionId = generalCollection.id
-            }
-        }
+        // Don't automatically assign snippets to collections anymore
+        // Let them remain uncollected until user explicitly assigns them
     }
 }
 

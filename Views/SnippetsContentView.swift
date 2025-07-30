@@ -20,6 +20,16 @@ struct SnippetsContentView: View {
         self.onCollectionHeaderTapped = onCollectionHeaderTapped
     }
     
+    // Get uncollected snippets (those with collectionId = nil)
+    var uncollectedSnippets: [Snippet] {
+        snippetManager.snippets.filter { snippet in
+            snippet.collectionId == nil &&
+            (searchText.isEmpty ||
+             snippet.shortcut.localizedCaseInsensitiveContains(searchText) ||
+             snippet.expansion.localizedCaseInsensitiveContains(searchText))
+        }
+    }
+    
     // Group snippets by collection, but ensure all collections are represented
     // This computed property will update automatically when snippetManager.snippets changes
     var allCollectionsWithSnippets: [(SnippetCollection, [Snippet])] {
@@ -74,14 +84,29 @@ extension SnippetsContentView {
     
     @ViewBuilder
     private var contentArea: some View {
-        if snippetManager.collections.isEmpty {
+        if snippetManager.collections.isEmpty && uncollectedSnippets.isEmpty {
             EmptyStateView(isSearching: false)
         } else {
-            AllCollectionsListView(
-                collectionsWithSnippets: allCollectionsWithSnippets,
-                editingSnippet: $editingSnippet,
-                onCollectionHeaderTapped: onCollectionHeaderTapped
-            )
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Show uncollected snippets first if any exist
+                    if !uncollectedSnippets.isEmpty {
+                        UncollectedSnippetsSection(
+                            snippets: uncollectedSnippets,
+                            editingSnippet: $editingSnippet
+                        )
+                    }
+                    
+                    // Then show all collections
+                    AllCollectionsListView(
+                        collectionsWithSnippets: allCollectionsWithSnippets,
+                        editingSnippet: $editingSnippet,
+                        onCollectionHeaderTapped: onCollectionHeaderTapped
+                    )
+                }
+                .padding(.vertical, 12)
+            }
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
         }
     }
 }

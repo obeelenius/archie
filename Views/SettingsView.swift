@@ -67,6 +67,12 @@ struct SettingsView: View {
             editingSnippet = nil
             showingAddSheet = false
             showingAddCollectionSheet = false
+            
+            // Notify AppDelegate of tab change for state tracking
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TabChanged"),
+                object: newValue
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToTab"))) { notification in
             if let newTab = notification.object as? MainView {

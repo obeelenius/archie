@@ -162,8 +162,7 @@ extension EditSnippetSlideOut {
         ScrollView {
             VStack(spacing: 16) {
                 triggerBehaviorSection
-                shortcutSection
-                expansionSection
+                snippetDetailsSection // Combined shortcut and expansion
             }
             .padding(16)
         }
@@ -203,21 +202,27 @@ extension EditSnippetSlideOut {
     }
 }
 
-// MARK: - Shortcut Section 100031
+// MARK: - Snippet Details Section 100032
 extension EditSnippetSlideOut {
-    private var shortcutSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var snippetDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Section header
             HStack(spacing: 6) {
                 Image(systemName: "keyboard")
                     .foregroundColor(.accentColor)
                     .font(.system(size: 14))
                 
-                Text("Shortcut")
+                Text("Snippet Details")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.primary)
             }
             
+            // Shortcut field
             VStack(alignment: .leading, spacing: 8) {
+                Text("Shortcut")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                
                 TextField("Current: \(snippet.shortcut)", text: $shortcut)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
@@ -228,34 +233,17 @@ extension EditSnippetSlideOut {
                             .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                     )
                 
-                Text("Edit shortcut or leave unchanged")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-}
-
-// MARK: - Expansion Section 100032
-extension EditSnippetSlideOut {
-    private var expansionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 6) {
-                Image(systemName: "text.alignleft")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 14))
-                
-                Text("Expansion")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.primary)
+                // Text("Edit shortcut or leave unchanged")
+                    // .font(.system(size: 10))
+                    // .foregroundColor(.secondary)
             }
             
+            // Expansion field
             VStack(alignment: .leading, spacing: 12) {
+                Text("Expansion")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                
                 expansionEditor
                 
                 Text("Supports line breaks and variables")
@@ -418,6 +406,7 @@ extension EditSnippetSlideOut {
             snippetManager.snippets[index].expansion = expansion
             snippetManager.snippets[index].requiresSpace = newRequiresSpace
             snippetManager.snippets[index].keepDelimiter = newKeepDelimiter
+            // Don't modify collectionId - keep existing assignment
             
             // Explicitly save to ensure persistence
             snippetManager.saveAllData()

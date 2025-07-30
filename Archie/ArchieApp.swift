@@ -47,19 +47,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var eventMonitor: EventMonitor?
     var snippetManager = SnippetManager.shared
     
+    // Track the last viewed tab for proper restoration
+    @AppStorage("lastViewedTab") private var lastViewedTabRaw = SettingsView.MainView.snippets.rawValue
+    
+    private var lastViewedTab: SettingsView.MainView {
+        get { SettingsView.MainView(rawValue: lastViewedTabRaw) ?? .snippets }
+        set { lastViewedTabRaw = newValue.rawValue }
+    }
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         setupEventMonitoring()
         setupAppIcons()
+        
+        // Listen for tab changes to track current view
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTabChange(_:)),
+            name: NSNotification.Name("TabChanged"),
+            object: nil
+        )
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // When dock icon is clicked, open preferences
-        print("Dock icon clicked!") // Debug output
+        // When dock icon is clicked, reopen to the last viewed tab
+        print("Dock icon clicked! Reopening to last viewed tab: \(lastViewedTab)")
         DispatchQueue.main.async {
-            self.openSettingsWindow()
+            self.openWindow(selectedTab: self.lastViewedTab)
         }
         return true
+    }
+    
+    @objc private func handleTabChange(_ notification: Notification) {
+        if let newTab = notification.object as? SettingsView.MainView {
+            lastViewedTab = newTab
+            print("Tab changed to: \(newTab), saved to preferences")
+        }
     }
 }
 
@@ -141,18 +164,24 @@ extension AppDelegate {
 // MARK: - Window Management 100077
 extension AppDelegate {
     func openSnippetsView() {
+        lastViewedTab = .snippets
         openWindow(selectedTab: .snippets)
     }
     
     func openCollectionsView() {
+        lastViewedTab = .collections
         openWindow(selectedTab: .collections)
     }
     
     func openSettingsWindow() {
-        openWindow(selectedTab: .general)  // Changed from .settings to .general
+        lastViewedTab = .general
+        openWindow(selectedTab: .general)
     }
     
     private func openWindow(selectedTab: SettingsView.MainView) {
+        // Update the last viewed tab
+        lastViewedTab = selectedTab
+        
         // Activate the app first
         NSApp.activate(ignoringOtherApps: true)
         
