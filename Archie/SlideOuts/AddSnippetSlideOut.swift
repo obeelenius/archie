@@ -89,68 +89,142 @@ extension AddSnippetSlideOut {
 extension AddSnippetSlideOut {
     private var headerSection: some View {
         VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Add Snippet")
-                        .font(.system(size: 16, weight: .bold))
-                    
-                    Text("Create text expansion")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
+            GeometryReader { geometry in
+                let availableWidth = geometry.size.width
+                let useCompactLayout = availableWidth < 500
                 
-                Spacer()
-                
-                HStack(spacing: 8) {
-                    Button("Cancel") {
-                        isShowing = false
-                    }
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 12))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                    )
-                    .buttonStyle(.plain)
-                    
-                    Button("Create") {
-                        saveSnippet()
-                    }
-                    .disabled(shortcut.isEmpty || expansionPlain.isEmpty)
-                    .foregroundColor(.white)
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill((shortcut.isEmpty || expansionPlain.isEmpty) ? Color.gray : Color.accentColor)
-                    )
-                    .buttonStyle(.plain)
-                    
-                    if !shortcut.isEmpty || !expansionPlain.isEmpty {
-                        Button("Clear") {
-                            clearDraftData()
+                if useCompactLayout {
+                    // Compact layout: stack vertically
+                    VStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add Snippet")
+                                .font(.system(size: 16, weight: .bold))
+                            
+                            Text("Create text expansion")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
                         }
-                        .foregroundColor(.orange)
-                        .font(.system(size: 12))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                        )
-                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        compactActionButtons
+                    }
+                } else {
+                    // Full layout: horizontal
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add Snippet")
+                                .font(.system(size: 16, weight: .bold))
+                            
+                            Text("Create text expansion")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        fullActionButtons
                     }
                 }
             }
+            .frame(height: 60) // Fixed height to prevent layout jumping
             
             Divider()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color(NSColor.windowBackgroundColor))
+    }
+    
+    private var compactActionButtons: some View {
+        HStack(spacing: 6) {
+            Button("Cancel") {
+                isShowing = false
+            }
+            .foregroundColor(.secondary)
+            .font(.system(size: 11))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Create") {
+                saveSnippet()
+            }
+            .disabled(shortcut.isEmpty || expansionPlain.isEmpty)
+            .foregroundColor(.white)
+            .font(.system(size: 11, weight: .semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill((shortcut.isEmpty || expansionPlain.isEmpty) ? Color.gray : Color.accentColor)
+            )
+            .buttonStyle(.plain)
+            
+            if !shortcut.isEmpty || !expansionPlain.isEmpty {
+                Button("Clear") {
+                    clearDraftData()
+                }
+                .foregroundColor(.orange)
+                .font(.system(size: 11))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    
+    private var fullActionButtons: some View {
+        HStack(spacing: 8) {
+            Button("Cancel") {
+                isShowing = false
+            }
+            .foregroundColor(.secondary)
+            .font(.system(size: 12))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Create") {
+                saveSnippet()
+            }
+            .disabled(shortcut.isEmpty || expansionPlain.isEmpty)
+            .foregroundColor(.white)
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill((shortcut.isEmpty || expansionPlain.isEmpty) ? Color.gray : Color.accentColor)
+            )
+            .buttonStyle(.plain)
+            
+            if !shortcut.isEmpty || !expansionPlain.isEmpty {
+                Button("Clear") {
+                    clearDraftData()
+                }
+                .foregroundColor(.orange)
+                .font(.system(size: 12))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 

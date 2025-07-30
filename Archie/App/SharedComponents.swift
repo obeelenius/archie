@@ -21,11 +21,20 @@ struct ResizeHandle: View {
             .contentShape(Rectangle())
             .background(resizeHandleBackground)
             .overlay(resizeHandleBorder)
-            .cursor(NSCursor.resizeLeftRight)
             .onHover { hovering in
                 isHovered = hovering
+                // Apply cursor immediately on hover change
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else if !isDragging {
+                    NSCursor.pop()
+                }
             }
             .gesture(resizeGesture)
+            // Add cursor tracking area for more reliable cursor display
+            .background(
+                CursorTrackingView(cursor: .resizeLeftRight, isActive: isHovered || isDragging)
+            )
     }
     
     private var resizeHandleBackground: some View {
@@ -48,6 +57,8 @@ struct ResizeHandle: View {
                     isDragging = true
                     startWidth = editorWidth
                     startLocation = value.startLocation.x
+                    // Ensure cursor stays during drag
+                    NSCursor.resizeLeftRight.push()
                 }
                 
                 let deltaX = value.location.x - startLocation
@@ -59,6 +70,10 @@ struct ResizeHandle: View {
             .onEnded { _ in
                 isDragging = false
                 handleSnapToTargets()
+                // Pop cursor when drag ends if not hovering
+                if !isHovered {
+                    NSCursor.pop()
+                }
             }
     }
     
@@ -72,6 +87,74 @@ struct ResizeHandle: View {
                     editorWidth = target
                 }
                 return
+            }
+        }
+    }
+}
+
+// MARK: - Cursor Tracking View 100086A
+struct CursorTrackingView: NSViewRepresentable {
+    let cursor: NSCursor
+    let isActive: Bool
+    
+    func makeNSView(context: Context) -> NSView {
+        let view = CursorView()
+        view.cursor = cursor
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let cursorView = nsView as? CursorView {
+            cursorView.isActive = isActive
+        }
+    }
+    
+    class CursorView: NSView {
+        var cursor: NSCursor = NSCursor.arrow
+        var isActive: Bool = false {
+            didSet {
+                updateTrackingArea()
+            }
+        }
+        
+        private var trackingArea: NSTrackingArea?
+        
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            updateTrackingArea()
+        }
+        
+        private func updateTrackingArea() {
+            if let trackingArea = trackingArea {
+                removeTrackingArea(trackingArea)
+            }
+            
+            if isActive {
+                trackingArea = NSTrackingArea(
+                    rect: bounds,
+                    options: [.activeInKeyWindow, .mouseEnteredAndExited, .mouseMoved],
+                    owner: self,
+                    userInfo: nil
+                )
+                addTrackingArea(trackingArea!)
+            }
+        }
+        
+        override func mouseEntered(with event: NSEvent) {
+            if isActive {
+                cursor.push()
+            }
+        }
+        
+        override func mouseExited(with event: NSEvent) {
+            if isActive {
+                NSCursor.pop()
+            }
+        }
+        
+        override func mouseMoved(with event: NSEvent) {
+            if isActive {
+                cursor.set()
             }
         }
     }

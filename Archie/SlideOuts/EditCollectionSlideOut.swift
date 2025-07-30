@@ -105,66 +105,138 @@ struct EditCollectionSlideOut: View {
 extension EditCollectionSlideOut {
     private var headerSection: some View {
         VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Edit Collection")
-                        .font(.system(size: 16, weight: .bold))
-                    
-                    Text("Modify collection settings")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
+            GeometryReader { geometry in
+                let availableWidth = geometry.size.width
+                let useCompactLayout = availableWidth < 500
                 
-                Spacer()
-                
-                HStack(spacing: 8) {
-                    Button("Delete") {
-                        deleteCollection()
+                if useCompactLayout {
+                    // Compact layout: stack vertically
+                    VStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Edit Collection")
+                                .font(.system(size: 16, weight: .bold))
+                            
+                            Text("Modify collection settings")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        compactActionButtons
                     }
-                    .foregroundColor(.red)
-                    .font(.system(size: 12, weight: .medium))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                    )
-                    .buttonStyle(.plain)
-                    
-                    Button("Cancel") {
-                        isShowing = false
+                } else {
+                    // Full layout: horizontal
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Edit Collection")
+                                .font(.system(size: 16, weight: .bold))
+                            
+                            Text("Modify collection settings")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        fullActionButtons
                     }
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 12))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                    )
-                    .buttonStyle(.plain)
-                    
-                    Button("Save Changes") {
-                        saveChanges()
-                    }
-                    .disabled(!hasUnsavedChanges)
-                    .foregroundColor(.white)
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(!hasUnsavedChanges ? Color.gray : Color.accentColor)
-                    )
-                    .buttonStyle(.plain)
                 }
             }
+            .frame(height: 60) // Fixed height to prevent layout jumping
             
             Divider()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color(NSColor.windowBackgroundColor))
+    }
+    
+    private var compactActionButtons: some View {
+        HStack(spacing: 6) {
+            Button("Delete") {
+                deleteCollection()
+            }
+            .foregroundColor(.red)
+            .font(.system(size: 11, weight: .medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Cancel") {
+                isShowing = false
+            }
+            .foregroundColor(.secondary)
+            .font(.system(size: 11))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Save") {
+                saveChanges()
+            }
+            .disabled(!hasUnsavedChanges)
+            .foregroundColor(.white)
+            .font(.system(size: 11, weight: .semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(!hasUnsavedChanges ? Color.gray : Color.accentColor)
+            )
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private var fullActionButtons: some View {
+        HStack(spacing: 8) {
+            Button("Delete") {
+                deleteCollection()
+            }
+            .foregroundColor(.red)
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Cancel") {
+                isShowing = false
+            }
+            .foregroundColor(.secondary)
+            .font(.system(size: 12))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            .buttonStyle(.plain)
+            
+            Button("Save Changes") {
+                saveChanges()
+            }
+            .disabled(!hasUnsavedChanges)
+            .foregroundColor(.white)
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(!hasUnsavedChanges ? Color.gray : Color.accentColor)
+            )
+            .buttonStyle(.plain)
+        }
     }
 }
 

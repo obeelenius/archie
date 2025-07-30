@@ -40,7 +40,7 @@ extension SettingsHeaderView {
     private var headerContent: some View {
         HStack {
             appIdentity
-            Spacer()
+            Spacer(minLength: 8)
             contextAwareAddButton
         }
         .padding(.horizontal, 16)
@@ -52,82 +52,98 @@ extension SettingsHeaderView {
             appIcon
             appInfo
         }
+        .layoutPriority(1) // Give priority to app identity
     }
     
     private var appIcon: some View {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(
-                        colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 35, height: 35)
-                    .shadow(color: Color.accentColor.opacity(0.2), radius: 4, x: 0, y: 2)
-                
-                if let appIcon = NSImage(named: "AppIcon") {
-                    Image(nsImage: appIcon)
-                        .resizable()
-                        .frame(width: 28, height: 28)
-                        .cornerRadius(4)
-                } else {
-                    Image(systemName: "text.cursor")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(LinearGradient(
+                    colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: 35, height: 35)
+                .shadow(color: Color.accentColor.opacity(0.2), radius: 4, x: 0, y: 2)
+            
+            if let appIcon = NSImage(named: "AppIcon") {
+                Image(nsImage: appIcon)
+                    .resizable()
+                    .frame(width: 28, height: 28)
+                    .cornerRadius(4)
+            } else {
+                Image(systemName: "text.cursor")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
             }
         }
+    }
         
     private var appInfo: some View {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Archie")
-                    .font(.custom("Lora", size: 16))
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Text("Text Expansion")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 1) {
+            Text("Archie")
+                .font(.custom("Lora", size: 16))
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+            
+            Text("Text Expansion")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
+        .fixedSize(horizontal: true, vertical: false) // Prevent text compression
+    }
 }
 
 // MARK: - Context-Aware Add Button 100128
 extension SettingsHeaderView {
     private var contextAwareAddButton: some View {
-        Button(action: {
-            if selectedView == .collections {
-                // Close any open editors first
-                editingSnippet = nil
-                editingCollection = nil
-                showingAddCollectionSheet = true
-            } else {
-                // Use the custom handler if provided (for snippet view)
-                if let handler = onAddSnippetTapped {
-                    handler()
-                } else {
-                    // Default behavior
+        GeometryReader { geometry in
+            let availableWidth = geometry.size.width
+            let useCompactButton = availableWidth < 140
+            
+            Button(action: {
+                if selectedView == .collections {
+                    // Close any open editors first
                     editingSnippet = nil
                     editingCollection = nil
-                    showingAddSheet = true
+                    showingAddCollectionSheet = true
+                } else {
+                    // Use the custom handler if provided (for snippet view)
+                    if let handler = onAddSnippetTapped {
+                        handler()
+                    } else {
+                        // Default behavior
+                        editingSnippet = nil
+                        editingCollection = nil
+                        showingAddSheet = true
+                    }
                 }
+            }) {
+                HStack(spacing: useCompactButton ? 4 : 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                    
+                    if !useCompactButton {
+                        Text(selectedView == .collections ? "Add Collection" : "Add Snippet")
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, useCompactButton ? 8 : 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(selectedView == .collections ? Color.purple : Color.accentColor)
+                )
             }
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(selectedView == .collections ? "Add Collection" : "Add Snippet")
-                    .font(.system(size: 12, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(selectedView == .collections ? Color.purple : Color.accentColor)
-            )
+            .buttonStyle(.plain)
+            .help(selectedView == .collections ? "Add Collection" : "Add Snippet")
         }
-        .buttonStyle(.plain)
+        .frame(height: 30)
+        .frame(maxWidth: 200) // Prevent button from getting too wide
     }
 }
 

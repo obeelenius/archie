@@ -111,45 +111,46 @@ extension SettingsView {
     }
     
     private func mainContentArea(geometry: GeometryProxy) -> some View {
-            VStack(spacing: 0) {
-                SettingsHeaderView(
-                    selectedView: $selectedView,
-                    showingAddSheet: $showingAddSheet,
-                    showingAddCollectionSheet: $showingAddCollectionSheet,
-                    editingSnippet: $editingSnippet,
-                    editingCollection: $editingCollection,
-                    onAddSnippetTapped: {
-                        // Close any existing editor and open add snippet
-                        editingSnippet = nil
-                        editingCollection = nil
-                        showingAddSheet = true
-                    }
-                )
-                
-                contentBasedOnSelectedView
-            }
-            .frame(width: showingEditor ? geometry.size.width * (1 - editorWidth) : geometry.size.width)
+        VStack(spacing: 0) {
+            SettingsHeaderView(
+                selectedView: $selectedView,
+                showingAddSheet: $showingAddSheet,
+                showingAddCollectionSheet: $showingAddCollectionSheet,
+                editingSnippet: $editingSnippet,
+                editingCollection: $editingCollection,
+                onAddSnippetTapped: {
+                    // Close any existing editor and open add snippet
+                    editingSnippet = nil
+                    editingCollection = nil
+                    showingAddSheet = true
+                }
+            )
+            
+            contentBasedOnSelectedView
         }
+        .frame(width: showingEditor ? geometry.size.width * (1 - editorWidth) : geometry.size.width)
+        .frame(minWidth: showingEditor ? 350 : 500) // Ensure minimum usable width
+    }
     
     @ViewBuilder
-        private var contentBasedOnSelectedView: some View {
-            switch selectedView {
-            case .snippets:
-                SnippetsContentView(
-                    filteredSnippets: filteredSnippets,
-                    searchText: $searchText,
-                    editingSnippet: $editingSnippet,
-                    onCollectionHeaderTapped: {
-                        // Close editor when collection header is tapped
-                        editingSnippet = nil
-                    }
-                )
-            case .collections:
-                CollectionsContentView(editingCollection: $editingCollection)
-            case .settings:  // Changed from .general to .settings
-                GeneralSettingsContentView()
-            }
+    private var contentBasedOnSelectedView: some View {
+        switch selectedView {
+        case .snippets:
+            SnippetsContentView(
+                filteredSnippets: filteredSnippets,
+                searchText: $searchText,
+                editingSnippet: $editingSnippet,
+                onCollectionHeaderTapped: {
+                    // Close editor when collection header is tapped
+                    editingSnippet = nil
+                }
+            )
+        case .collections:
+            CollectionsContentView(editingCollection: $editingCollection)
+        case .settings:  // Changed from .general to .settings
+            GeneralSettingsContentView()
         }
+    }
     
     @ViewBuilder
     private func editorPanel(geometry: GeometryProxy) -> some View {
@@ -162,36 +163,37 @@ extension SettingsView {
                 )
                 
                 currentEditorContent
+                    .frame(minWidth: 320) // Ensure editor has minimum width
             }
-            .frame(width: geometry.size.width * editorWidth)
+            .frame(width: max(320, geometry.size.width * editorWidth)) // Ensure minimum editor width
             .transition(.move(edge: .trailing))
         }
     }
     
     @ViewBuilder
-        private var currentEditorContent: some View {
-            if let editingCollection = editingCollection {
-                EditCollectionSlideOut(
-                    collection: editingCollection,
-                    isShowing: Binding(
-                        get: { self.editingCollection != nil },
-                        set: { if !$0 { self.editingCollection = nil } }
-                    )
+    private var currentEditorContent: some View {
+        if let editingCollection = editingCollection {
+            EditCollectionSlideOut(
+                collection: editingCollection,
+                isShowing: Binding(
+                    get: { self.editingCollection != nil },
+                    set: { if !$0 { self.editingCollection = nil } }
                 )
-            } else if let editingSnippet = editingSnippet {
-                EditSnippetSlideOut(
-                    snippet: editingSnippet,
-                    isShowing: Binding(
-                        get: { self.editingSnippet != nil },
-                        set: { if !$0 { self.editingSnippet = nil } }
-                    )
+            )
+        } else if let editingSnippet = editingSnippet {
+            EditSnippetSlideOut(
+                snippet: editingSnippet,
+                isShowing: Binding(
+                    get: { self.editingSnippet != nil },
+                    set: { if !$0 { self.editingSnippet = nil } }
                 )
-            } else if showingAddCollectionSheet {
-                AddCollectionSlideOut(isShowing: $showingAddCollectionSheet)
-            } else {
-                AddSnippetSlideOut(isShowing: $showingAddSheet)
-            }
+            )
+        } else if showingAddCollectionSheet {
+            AddCollectionSlideOut(isShowing: $showingAddCollectionSheet)
+        } else {
+            AddSnippetSlideOut(isShowing: $showingAddSheet)
         }
+    }
     
     private var undoToastOverlay: some View {
         VStack {
