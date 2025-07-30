@@ -1282,71 +1282,93 @@ extension WYSIWYGRichTextEditor.Coordinator {
             return false
         }
         
-        // Check if we're in a list by examining paragraph style
-        let paragraphRange = (textView.string as NSString).paragraphRange(for: currentRange)
+        // Get the current line
+        let text = textView.string
+        let lineStart = findLineStart(in: text, from: currentRange.location)
+        let lineEnd = findLineEnd(in: text, from: currentRange.location)
         
-        // Safety check for paragraph range
-        guard paragraphRange.location != NSNotFound &&
-              paragraphRange.location < textView.string.count &&
-              paragraphRange.location + paragraphRange.length <= textView.string.count else {
+        guard lineStart <= lineEnd && lineEnd <= text.count else {
             return false
         }
         
-        // Only check attributes if we have a valid location
-        guard currentRange.location < textView.textStorage?.length ?? 0 else {
-            return false
-        }
+        let currentLine = String(text[text.index(text.startIndex, offsetBy: lineStart)..<text.index(text.startIndex, offsetBy: lineEnd)])
+        let trimmedLine = currentLine.trimmingCharacters(in: .whitespaces)
         
-        if let paragraphStyle = textView.textStorage?.attribute(.paragraphStyle, at: currentRange.location, effectiveRange: nil) as? NSParagraphStyle,
-           !paragraphStyle.textLists.isEmpty {
+        print("DEBUG: Handling newline on line: '\(currentLine)'")
+        
+        // Check if current line is a bullet list item
+        if trimmedLine.hasPrefix("• ") {
+            let content = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
             
-            let textList = paragraphStyle.textLists.first!
-            let currentText = (textView.string as NSString).substring(with: paragraphRange).trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            if currentText.isEmpty {
-                // Empty list item - exit the list
-                let newParagraphStyle = NSMutableParagraphStyle()
-                newParagraphStyle.textLists = []
-                newParagraphStyle.headIndent = 0
-                newParagraphStyle.firstLineHeadIndent = 0
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: paragraphRange)
+            if content.isEmpty {
+                // Empty bullet item - remove the bullet and exit list
+                let bulletRange = NSRange(location: lineStart, length: lineEnd - lineStart)
+                textView.replaceCharacters(in: bulletRange, with: "")
+                print("DEBUG: Removed empty bullet item")
                 return false // Let system handle the newline
             } else {
-                // Non-empty list item - continue the list
-                textView.insertText("\n", replacementRange: currentRange)
+                // Non-empty bullet item - continue the list
+                textView.insertText("\n• ", replacementRange: currentRange)
+                print("DEBUG: Continued bullet list")
                 
-                // Apply same list formatting to new paragraph
-                let newCursorLocation = currentRange.location + 1
-                
-                // Safety check for new cursor location
-                guard newCursorLocation <= textView.string.count else {
-                    return true
-                }
-                
-                let newParagraphRange = NSRange(location: newCursorLocation, length: 0)
-                let newParagraphStyle = NSMutableParagraphStyle()
-                newParagraphStyle.textLists = [textList]
-                newParagraphStyle.headIndent = paragraphStyle.headIndent
-                newParagraphStyle.firstLineHeadIndent = paragraphStyle.firstLineHeadIndent
-                
-                let extendedRange = (textView.string as NSString).paragraphRange(for: newParagraphRange)
-                
-                // Safety check for extended range
-                guard extendedRange.location != NSNotFound &&
-                      extendedRange.location + extendedRange.length <= textView.string.count else {
-                    return true
-                }
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: extendedRange)
-                
+                // Update parent binding
                 parent.attributedText = textView.attributedString()
                 parent.plainText = textView.attributedString().string
                 return true
             }
         }
         
+        // Check if current line is a numbered list item
+        let numberPattern = #"^(\d+)\.\s+"#
+        if let regex = try? NSRegularExpression(pattern: numberPattern),
+           let match = regex.firstMatch(in: trimmedLine, range: NSRange(location: 0, length: trimmedLine.count)) {
+            
+            let numberRange = match.range(at: 1)
+            let numberString = (trimmedLine as NSString).substring(with: numberRange)
+            
+            if let currentNumber = Int(numberString) {
+                let contentAfterNumber = (trimmedLine as NSString).substring(from: match.range.location + match.range.length)
+                let content = contentAfterNumber.trimmingCharacters(in: .whitespaces)
+                
+                if content.isEmpty {
+                    // Empty numbered item - remove the number and exit list
+                    let numberItemRange = NSRange(location: lineStart, length: lineEnd - lineStart)
+                    textView.replaceCharacters(in: numberItemRange, with: "")
+                    print("DEBUG: Removed empty numbered item")
+                    return false // Let system handle the newline
+                } else {
+                    // Non-empty numbered item - continue the list with next number
+                    let nextNumber = currentNumber + 1
+                    textView.insertText("\n\(nextNumber). ", replacementRange: currentRange)
+                    print("DEBUG: Continued numbered list with number \(nextNumber)")
+                    
+                    // Update parent binding
+                    parent.attributedText = textView.attributedString()
+                    parent.plainText = textView.attributedString().string
+                    return true
+                }
+            }
+        }
+        
         return false // Let the system handle the newline normally
+    }
+    
+    private func findLineStart(in text: String, from position: Int) -> Int {
+        guard position > 0 else { return 0 }
+        
+        var index = position - 1
+        while index >= 0 && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
+            index -= 1
+        }
+        return index + 1
+    }
+    
+    private func findLineEnd(in text: String, from position: Int) -> Int {
+        var index = position
+        while index < text.count && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
+            index += 1
+        }
+        return index
     }
 }
 
