@@ -228,7 +228,7 @@ extension EditSnippetSlideOut {
                 
                 TextField("Current: \(snippet.shortcut)", text: $shortcut)
                     .textFieldStyle(.plain)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(.body))
                     .padding(10)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
@@ -759,106 +759,106 @@ struct EditEnhancedVariableGroup: View {
     }
 }
 
-// MARK: - Enhanced Variable Button Component 100039
-struct EditEnhancedVariableButton: View {
-    let variableInfo: EditEnhancedVariableInfo
-    let color: Color
-    @Binding var expansion: String
-    @State private var isPressed = false
-    @State private var isHovered = false
-    
-    var body: some View {
-        Button(action: {
-            insertVariableWithUndo()
-        }) {
-            VStack(alignment: .leading, spacing: 4) {
-                // Variable code
-                Text(variableInfo.variable)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundColor(color)
-                
-                // Title
-                Text(variableInfo.title)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                // Live example
-                Text(variableInfo.example)
-                    .font(.system(size: 8, design: .monospaced))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(width: 100, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(buttonBackgroundColor)
-                    .stroke(buttonBorderColor, lineWidth: 1)
-                    .shadow(
-                        color: .black.opacity(isPressed ? 0.1 : 0.04),
-                        radius: isPressed ? 1 : 3,
-                        x: 0,
-                        y: isPressed ? 0.5 : 1.5
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.96 : (isHovered ? 1.02 : 1.0))
-        .animation(.easeInOut(duration: 0.1), value: isPressed)
-        .animation(.easeInOut(duration: 0.2), value: isHovered)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
-        .help("\(variableInfo.title) - Example: \(variableInfo.example)")
-    }
-    
-    private var buttonBackgroundColor: Color {
-        if isPressed {
-            return color.opacity(0.15)
-        } else if isHovered {
-            return color.opacity(0.08)
-        } else {
-            return Color(NSColor.controlBackgroundColor)
-        }
-    }
-    
-    private var buttonBorderColor: Color {
-        if isPressed {
-            return color.opacity(0.4)
-        } else if isHovered {
-            return color.opacity(0.3)
-        } else {
-            return Color(NSColor.separatorColor).opacity(0.3)
-        }
-    }
-    
-    private func insertVariableWithUndo() {
-        let oldExpansion = expansion
-        let newExpansion = expansion + variableInfo.variable
+    // MARK: - Enhanced Variable Button Component 100039
+    struct EditEnhancedVariableButton: View {
+        let variableInfo: EditEnhancedVariableInfo
+        let color: Color
+        @Binding var expansion: String
+        @State private var isPressed = false
+        @State private var isHovered = false
         
-        // Update the binding
-        expansion = newExpansion
-        
-        // Try to register undo with the current responder's undo manager
-        DispatchQueue.main.async {
-            if let window = NSApp.keyWindow,
-               let firstResponder = window.firstResponder,
-               let undoManager = firstResponder.undoManager {
-                
-                undoManager.registerUndo(withTarget: EditUndoHelper.shared) { helper in
-                    expansion = oldExpansion
+        var body: some View {
+            Button(action: {
+                insertVariableWithUndo()
+            }) {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Variable code
+                    Text(variableInfo.variable)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(color)
+                    
+                    // Title
+                    Text(variableInfo.title)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    // Live example
+                    Text(variableInfo.example)
+                        .font(.system(size: 8))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                 }
-                undoManager.setActionName("Insert Variable")
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(width: 100, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(buttonBackgroundColor)
+                        .stroke(buttonBorderColor, lineWidth: 1)
+                        .shadow(
+                            color: .black.opacity(isPressed ? 0.1 : 0.04),
+                            radius: isPressed ? 1 : 3,
+                            x: 0,
+                            y: isPressed ? 0.5 : 1.5
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .scaleEffect(isPressed ? 0.96 : (isHovered ? 1.02 : 1.0))
+            .animation(.easeInOut(duration: 0.1), value: isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                isPressed = pressing
+            }, perform: {})
+            .help("\(variableInfo.title) - Example: \(variableInfo.example)")
+        }
+        
+        private var buttonBackgroundColor: Color {
+            if isPressed {
+                return color.opacity(0.15)
+            } else if isHovered {
+                return color.opacity(0.08)
+            } else {
+                return Color(NSColor.controlBackgroundColor)
+            }
+        }
+        
+        private var buttonBorderColor: Color {
+            if isPressed {
+                return color.opacity(0.4)
+            } else if isHovered {
+                return color.opacity(0.3)
+            } else {
+                return Color(NSColor.separatorColor).opacity(0.3)
+            }
+        }
+        
+        private func insertVariableWithUndo() {
+            let oldExpansion = expansion
+            let newExpansion = expansion + variableInfo.variable
+            
+            // Update the binding
+            expansion = newExpansion
+            
+            // Try to register undo with the current responder's undo manager
+            DispatchQueue.main.async {
+                if let window = NSApp.keyWindow,
+                   let firstResponder = window.firstResponder,
+                   let undoManager = firstResponder.undoManager {
+                    
+                    undoManager.registerUndo(withTarget: EditUndoHelper.shared) { helper in
+                        expansion = oldExpansion
+                    }
+                    undoManager.setActionName("Insert Variable")
+                }
             }
         }
     }
-}
 
 // MARK: - Undo Helper Class 100040
 class EditUndoHelper: NSObject {

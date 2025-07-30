@@ -481,7 +481,7 @@ struct CollectionCard: View {
         let currentSnippet = snippetManager.snippets.first { $0.id == snippet.id } ?? snippet
         
         return Text(currentSnippet.shortcut)
-            .font(.system(.caption, design: .monospaced))
+            .font(.system(.caption))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
@@ -509,7 +509,7 @@ struct CollectionCard: View {
         
         return HStack {
             Text(currentSnippet.shortcut)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(.caption))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(

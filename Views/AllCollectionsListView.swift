@@ -310,7 +310,7 @@ struct AllCollectionPreviewSnippetsView: View {
         HStack(spacing: 3) {
             ForEach(snippets, id: \.id) { snippet in
                 Text(snippet.shortcut)
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .font(.system(size: 8, weight: .medium))
                     .foregroundColor(color)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)

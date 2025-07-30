@@ -62,7 +62,7 @@ extension SnippetCardView {
     private var shortcutPill: some View {
         HStack(spacing: 3) {
             Text(currentSnippet.shortcut)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(pillForegroundColor)
             
             if !currentSnippet.requiresSpace {
@@ -201,7 +201,7 @@ extension SnippetCardView {
             
             ScrollView {
                 Text(currentSnippet.expansion)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 11))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
