@@ -234,9 +234,9 @@ extension AddSnippetSlideOut {
                             .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                     )
                 
-                Text("Type + space to expand")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                // Text("Type + space to expand")
+                 //   .font(.system(size: 10))
+                 //   .foregroundColor(.secondary)
             }
             
             // Expansion field with toolbar

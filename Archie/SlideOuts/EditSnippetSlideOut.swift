@@ -11,10 +11,13 @@ struct EditSnippetSlideOut: View {
     
     @State private var shortcut = ""
     @State private var expansion = ""
+    @State private var expansionAttributed = NSAttributedString()
     @State private var triggerMode: TriggerMode = .spaceRequiredConsume
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var initializedSnippetId: UUID? = nil
+    @State private var editorHeight: CGFloat = 120
+    @State private var editorCoordinator: WYSIWYGRichTextEditor.Coordinator?
     
     // Get the current snippet data from the manager
     private var currentSnippet: Snippet {
@@ -232,23 +235,154 @@ extension EditSnippetSlideOut {
                             .fill(Color(NSColor.textBackgroundColor))
                             .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                     )
-                
-                // Text("Edit shortcut or leave unchanged")
-                    // .font(.system(size: 10))
-                    // .foregroundColor(.secondary)
             }
             
-            // Expansion field
-            VStack(alignment: .leading, spacing: 12) {
+            // Expansion field with rich text editor and toolbar
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Expansion")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                expansionEditor
+                // Resizable container with same styling as add snippet
+                ZStack(alignment: .bottomTrailing) {
+                    VStack(spacing: 0) {
+                        // Formatting toolbar
+                        HStack(spacing: 4) {
+                            // Bold
+                            ToolbarButton(icon: "bold", format: "**text**") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.bold)
+                                } else {
+                                    print("DEBUG: No coordinator available for bold")
+                                }
+                            }
+                            
+                            // Italic
+                            ToolbarButton(icon: "italic", format: "*text*") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.italic)
+                                } else {
+                                    print("DEBUG: No coordinator available for italic")
+                                }
+                            }
+                            
+                            // Underline
+                            ToolbarButton(icon: "underline", format: "__text__") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.underline)
+                                } else {
+                                    print("DEBUG: No coordinator available for underline")
+                                }
+                            }
+                            
+                            // Strikethrough
+                            ToolbarButton(icon: "strikethrough", format: "~~text~~") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.strikethrough)
+                                } else {
+                                    print("DEBUG: No coordinator available for strikethrough")
+                                }
+                            }
+                            
+                            Rectangle()
+                                .fill(Color(NSColor.separatorColor))
+                                .frame(width: 1, height: 20)
+                                .padding(.horizontal, 4)
+                            
+                            // Bullet list
+                            ToolbarButton(icon: "list.bullet", format: "- item") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertBulletList()
+                                } else {
+                                    print("DEBUG: No coordinator available for bullet list")
+                                }
+                            }
+                            
+                            // Numbered list
+                            ToolbarButton(icon: "list.number", format: "1. item") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertNumberedList()
+                                } else {
+                                    print("DEBUG: No coordinator available for numbered list")
+                                }
+                            }
+                            
+                            Rectangle()
+                                .fill(Color(NSColor.separatorColor))
+                                .frame(width: 1, height: 20)
+                                .padding(.horizontal, 4)
+                            
+                            // Link
+                            ToolbarButton(icon: "link", format: "[text](url)") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertLink()
+                                } else {
+                                    print("DEBUG: No coordinator available for link")
+                                }
+                            }
+                            
+                            // Image
+                            ToolbarButton(icon: "photo", format: "![alt](url)") {
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertImage()
+                                } else {
+                                    print("DEBUG: No coordinator available for image")
+                                }
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        
+                        // Separator line between toolbar and editor
+                        Rectangle()
+                            .fill(Color(NSColor.separatorColor))
+                            .frame(height: 1)
+                        
+                        // WYSIWYG Rich text editor (no scroll, resizable)
+                        WYSIWYGRichTextEditor(
+                            attributedText: $expansionAttributed,
+                            plainText: $expansion,
+                            height: $editorHeight,
+                            coordinator: $editorCoordinator
+                        )
+                        .padding(10)
+                        .frame(height: editorHeight)
+                    }
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                    )
+                    
+                    // Resize handle
+                    resizeHandle
+                }
                 
-                Text("Supports line breaks and variables")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                HStack {
+                    Text("Supports variables and line breaks")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Button("Preview") {
+                        showFormattedPreview()
+                    }
+                    .font(.system(size: 10))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.blue.opacity(0.1))
+                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundColor(.blue)
+                    .buttonStyle(.plain)
+                }
                 
                 enhancedVariablesSection
             }
@@ -260,18 +394,39 @@ extension EditSnippetSlideOut {
         )
     }
     
-    private var expansionEditor: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.textBackgroundColor))
-                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                .frame(minHeight: 100)
-            
-            TextEditor(text: $expansion)
-                .font(.system(.body, design: .monospaced))
-                .padding(6)
-                .scrollContentBackground(.hidden)
+    private var resizeHandle: some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 2) {
+                Spacer()
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 8, height: 1)
+            }
+            Rectangle()
+                .fill(Color.secondary.opacity(0.5))
+                .frame(width: 12, height: 1)
         }
+        .frame(width: 12, height: 6)
+        .padding(6)
+        .cursor(NSCursor.resizeUpDown)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    let newHeight = max(80, min(400, editorHeight + value.translation.height))
+                    editorHeight = newHeight
+                }
+        )
+    }
+    
+    private func showFormattedPreview() {
+        // Process the current text and show a preview with formatting
+        let processedText = RichTextProcessor.shared.processRichText(expansion)
+        
+        let alert = NSAlert()
+        alert.messageText = "Formatted Preview"
+        alert.informativeText = processedText.string
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
 
@@ -379,6 +534,11 @@ extension EditSnippetSlideOut {
         shortcut = currentSnippet.shortcut
         expansion = currentSnippet.expansion
         
+        // Load rich text representation if available
+        if !expansion.isEmpty {
+            expansionAttributed = RichTextProcessor.shared.processRichText(expansion)
+        }
+        
         // Determine trigger mode based on both requiresSpace and keepDelimiter
         if !currentSnippet.requiresSpace {
             triggerMode = .instant
@@ -403,10 +563,21 @@ extension EditSnippetSlideOut {
         
         if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
             snippetManager.snippets[index].shortcut = finalShortcut
-            snippetManager.snippets[index].expansion = expansion
+            
+            // Use the rich text content from the editor
+            let expansionText = expansionAttributed.length > 0 ? expansionAttributed.string : expansion
+            snippetManager.snippets[index].expansion = expansionText
+            
             snippetManager.snippets[index].requiresSpace = newRequiresSpace
             snippetManager.snippets[index].keepDelimiter = newKeepDelimiter
             // Don't modify collectionId - keep existing assignment
+            
+            // Store the attributed text separately for rich formatting if needed
+            if expansionAttributed.length > 0 {
+                if let rtfData = expansionAttributed.rtf(from: NSRange(location: 0, length: expansionAttributed.length), documentAttributes: [:]) {
+                    UserDefaults.standard.set(rtfData, forKey: "snippet_rtf_\(snippet.id.uuidString)")
+                }
+            }
             
             // Explicitly save to ensure persistence
             snippetManager.saveAllData()
@@ -418,7 +589,6 @@ extension EditSnippetSlideOut {
         isShowing = false
     }
 }
-
 // MARK: - Live Example Functions 100036
 extension EditSnippetSlideOut {
     private func getCurrentDateExample() -> String {
