@@ -35,7 +35,7 @@ class PermissionBannerManager: ObservableObject {
     private func checkPermissions() {
         DispatchQueue.main.async {
             let hasPermissions = AXIsProcessTrusted()
-            print("DEBUG BANNER: AXIsProcessTrusted() = \(hasPermissions)")
+            // print("DEBUG BANNER: AXIsProcessTrusted() = \(hasPermissions)")
             self.showBanner = !hasPermissions
         }
     }

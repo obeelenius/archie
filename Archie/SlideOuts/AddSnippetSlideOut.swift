@@ -252,22 +252,38 @@ extension AddSnippetSlideOut {
                         HStack(spacing: 4) {
                             // Bold
                             ToolbarButton(icon: "bold", format: "**text**") {
-                                editorCoordinator?.applyFormatting(.bold)
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.bold)
+                                } else {
+                                    print("DEBUG: No coordinator available for bold")
+                                }
                             }
                             
                             // Italic
                             ToolbarButton(icon: "italic", format: "*text*") {
-                                editorCoordinator?.applyFormatting(.italic)
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.italic)
+                                } else {
+                                    print("DEBUG: No coordinator available for italic")
+                                }
                             }
                             
                             // Underline
                             ToolbarButton(icon: "underline", format: "__text__") {
-                                editorCoordinator?.applyFormatting(.underline)
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.underline)
+                                } else {
+                                    print("DEBUG: No coordinator available for underline")
+                                }
                             }
                             
                             // Strikethrough
                             ToolbarButton(icon: "strikethrough", format: "~~text~~") {
-                                editorCoordinator?.applyFormatting(.strikethrough)
+                                if let coordinator = editorCoordinator {
+                                    coordinator.applyFormatting(.strikethrough)
+                                } else {
+                                    print("DEBUG: No coordinator available for strikethrough")
+                                }
                             }
                             
                             Rectangle()
@@ -277,12 +293,20 @@ extension AddSnippetSlideOut {
                             
                             // Bullet list
                             ToolbarButton(icon: "list.bullet", format: "- item") {
-                                editorCoordinator?.insertBulletList()
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertBulletList()
+                                } else {
+                                    print("DEBUG: No coordinator available for bullet list")
+                                }
                             }
                             
                             // Numbered list
                             ToolbarButton(icon: "list.number", format: "1. item") {
-                                editorCoordinator?.insertNumberedList()
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertNumberedList()
+                                } else {
+                                    print("DEBUG: No coordinator available for numbered list")
+                                }
                             }
                             
                             Rectangle()
@@ -292,12 +316,20 @@ extension AddSnippetSlideOut {
                             
                             // Link
                             ToolbarButton(icon: "link", format: "[text](url)") {
-                                editorCoordinator?.insertLink()
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertLink()
+                                } else {
+                                    print("DEBUG: No coordinator available for link")
+                                }
                             }
                             
                             // Image
                             ToolbarButton(icon: "photo", format: "![alt](url)") {
-                                editorCoordinator?.insertImage()
+                                if let coordinator = editorCoordinator {
+                                    coordinator.insertImage()
+                                } else {
+                                    print("DEBUG: No coordinator available for image")
+                                }
                             }
                             
                             Spacer()
@@ -315,15 +347,11 @@ extension AddSnippetSlideOut {
                         WYSIWYGRichTextEditor(
                             attributedText: $expansionAttributed,
                             plainText: $expansionPlain,
-                            height: $editorHeight
+                            height: $editorHeight,
+                            coordinator: $editorCoordinator
                         )
                         .padding(10)
                         .frame(height: editorHeight)
-                        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("EditorReady"))) { notification in
-                            if let coordinator = notification.object as? WYSIWYGRichTextEditor.Coordinator {
-                                editorCoordinator = coordinator
-                            }
-                        }
                     }
                     .background(Color(NSColor.textBackgroundColor))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -413,7 +441,6 @@ extension AddSnippetSlideOut {
         alert.runModal()
     }
 }
-
 // MARK: - Format Toolbar Button Component 100061
 struct FormatToolbarButton: View {
     let format: String
@@ -1118,6 +1145,7 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
     @Binding var attributedText: NSAttributedString
     @Binding var plainText: String
     @Binding var height: CGFloat
+    @Binding var coordinator: Coordinator?
     
     func makeNSView(context: Context) -> NSView {
         let containerView = NSView()
@@ -1136,15 +1164,13 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
             textView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
         ])
         
-        // Store reference and notify SwiftUI
+        // Store reference in coordinator
         context.coordinator.textView = textView
         
-        // Notify SwiftUI that coordinator is ready
+        // Set coordinator binding after view creation is complete
         DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: NSNotification.Name("EditorReady"),
-                object: context.coordinator
-            )
+            coordinator = context.coordinator
+            print("DEBUG: Coordinator set via async dispatch")
         }
         
         return containerView
@@ -1162,7 +1188,10 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-    
+}
+
+// MARK: - WYSIWYG Text View Configuration 100079
+extension WYSIWYGRichTextEditor {
     private func configureTextView(_ textView: NSTextView, context: Context) {
         // Configure for rich text editing
         textView.isEditable = true
@@ -1172,10 +1201,18 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
         textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
         textView.delegate = context.coordinator
         
-        // Disable automatic text replacement that might interfere
+        // Disable automatic text replacement and formatting that might interfere
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        
+        // Set default text color to prevent blue underlined text
+        textView.textColor = NSColor.labelColor
+        textView.insertionPointColor = NSColor.labelColor
         
         // Configure text container for proper sizing
         textView.textContainer?.containerSize = CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
@@ -1190,14 +1227,22 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
         textView.enclosingScrollView?.hasHorizontalScroller = false
         textView.enclosingScrollView?.autohidesScrollers = true
         
-        // Set initial content
+        // Set initial content with proper attributes
         if attributedText.length > 0 {
             textView.textStorage?.setAttributedString(attributedText)
         } else {
             textView.string = ""
+            // Set default typing attributes to prevent formatting issues
+            textView.typingAttributes = [
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                .foregroundColor: NSColor.labelColor
+            ]
         }
     }
-    
+}
+
+// MARK: - WYSIWYG Coordinator Base 100080
+extension WYSIWYGRichTextEditor {
     class Coordinator: NSObject, NSTextViewDelegate {
         let parent: WYSIWYGRichTextEditor
         weak var textView: NSTextView?
@@ -1223,437 +1268,503 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
             }
             return false
         }
+    }
+}
+
+// MARK: - WYSIWYG Newline Handling 100081
+extension WYSIWYGRichTextEditor.Coordinator {
+    private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
+        let currentRange = textView.selectedRange()
         
-        private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
-            let currentRange = textView.selectedRange()
+        // Safety check for valid range
+        guard currentRange.location != NSNotFound &&
+              currentRange.location <= textView.string.count else {
+            return false
+        }
+        
+        // Check if we're in a list by examining paragraph style
+        let paragraphRange = (textView.string as NSString).paragraphRange(for: currentRange)
+        
+        // Safety check for paragraph range
+        guard paragraphRange.location != NSNotFound &&
+              paragraphRange.location < textView.string.count &&
+              paragraphRange.location + paragraphRange.length <= textView.string.count else {
+            return false
+        }
+        
+        // Only check attributes if we have a valid location
+        guard currentRange.location < textView.textStorage?.length ?? 0 else {
+            return false
+        }
+        
+        if let paragraphStyle = textView.textStorage?.attribute(.paragraphStyle, at: currentRange.location, effectiveRange: nil) as? NSParagraphStyle,
+           !paragraphStyle.textLists.isEmpty {
             
-            // Check if we're in a list by examining paragraph style
-            let paragraphRange = (textView.string as NSString).paragraphRange(for: currentRange)
+            let textList = paragraphStyle.textLists.first!
+            let currentText = (textView.string as NSString).substring(with: paragraphRange).trimmingCharacters(in: .whitespacesAndNewlines)
             
-            if let paragraphStyle = textView.textStorage?.attribute(.paragraphStyle, at: currentRange.location, effectiveRange: nil) as? NSParagraphStyle,
-               !paragraphStyle.textLists.isEmpty {
+            if currentText.isEmpty {
+                // Empty list item - exit the list
+                let newParagraphStyle = NSMutableParagraphStyle()
+                newParagraphStyle.textLists = []
+                newParagraphStyle.headIndent = 0
+                newParagraphStyle.firstLineHeadIndent = 0
                 
-                let textList = paragraphStyle.textLists.first!
-                let currentText = (textView.string as NSString).substring(with: paragraphRange).trimmingCharacters(in: .whitespacesAndNewlines)
+                textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: paragraphRange)
+                return false // Let system handle the newline
+            } else {
+                // Non-empty list item - continue the list
+                textView.insertText("\n", replacementRange: currentRange)
                 
-                if currentText.isEmpty {
-                    // Empty list item - exit the list
-                    let newParagraphStyle = NSMutableParagraphStyle()
-                    newParagraphStyle.textLists = []
-                    newParagraphStyle.headIndent = 0
-                    newParagraphStyle.firstLineHeadIndent = 0
-                    
-                    textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: paragraphRange)
-                    return false // Let system handle the newline
-                } else {
-                    // Non-empty list item - continue the list
-                    textView.insertText("\n", replacementRange: currentRange)
-                    
-                    // Apply same list formatting to new paragraph
-                    let newCursorLocation = currentRange.location + 1
-                    let newParagraphRange = NSRange(location: newCursorLocation, length: 0)
-                    let newParagraphStyle = NSMutableParagraphStyle()
-                    newParagraphStyle.textLists = [textList]
-                    newParagraphStyle.headIndent = paragraphStyle.headIndent
-                    newParagraphStyle.firstLineHeadIndent = paragraphStyle.firstLineHeadIndent
-                    
-                    let extendedRange = (textView.string as NSString).paragraphRange(for: newParagraphRange)
-                    textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: extendedRange)
-                    
-                    parent.attributedText = textView.attributedString()
-                    parent.plainText = textView.attributedString().string
+                // Apply same list formatting to new paragraph
+                let newCursorLocation = currentRange.location + 1
+                
+                // Safety check for new cursor location
+                guard newCursorLocation <= textView.string.count else {
                     return true
                 }
-            }
-            
-            return false // Let the system handle the newline normally
-        }
-        
-        private func findLineStart(in text: String, from position: Int) -> Int {
-            var index = position - 1
-            while index >= 0 && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
-                index -= 1
-            }
-            return index + 1
-        }
-        
-        private func findLineEnd(in text: String, from position: Int) -> Int {
-            var index = position
-            while index < text.count && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
-                index += 1
-            }
-            return index
-        }
-        
-        func applyFormatting(_ formatting: RichTextFormatting) {
-            guard let textView = textView else { return }
-            
-            let selectedRange = textView.selectedRange()
-            guard selectedRange.length > 0 else { return }
-            
-            textView.textStorage?.beginEditing()
-            
-            switch formatting {
-            case .bold:
-                toggleBold(in: selectedRange)
-            case .italic:
-                toggleItalic(in: selectedRange)
-            case .underline:
-                toggleUnderline(in: selectedRange)
-            case .strikethrough:
-                toggleStrikethrough(in: selectedRange)
-            }
-            
-            textView.textStorage?.endEditing()
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        func insertBulletList() {
-            guard let textView = textView else { return }
-            
-            let selectedRange = textView.selectedRange()
-            
-            if selectedRange.length > 0 {
-                // Text is selected - convert selected lines to proper bullet list
-                convertSelectionToBulletList(textView: textView, range: selectedRange)
-            } else {
-                // No selection - insert bullet point at cursor with proper formatting
-                insertProperBulletPointAtCursor(textView: textView, range: selectedRange)
-            }
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        func insertNumberedList() {
-            guard let textView = textView else { return }
-            
-            let selectedRange = textView.selectedRange()
-            
-            if selectedRange.length > 0 {
-                // Text is selected - convert selected lines to proper numbered list
-                convertSelectionToNumberedList(textView: textView, range: selectedRange)
-            } else {
-                // No selection - insert numbered item at cursor with proper formatting
-                insertProperNumberedItemAtCursor(textView: textView, range: selectedRange)
-            }
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        private func convertSelectionToBulletList(textView: NSTextView, range: NSRange) {
-            textView.textStorage?.beginEditing()
-            
-            // Get the paragraph ranges for the selection
-            let paragraphRanges = getParagraphRanges(in: textView.string, for: range)
-            
-            // Create proper NSTextList
-            let bulletList = NSTextList(markerFormat: .disc, options: 0)
-            
-            for paragraphRange in paragraphRanges.reversed() { // Process in reverse to maintain indices
-                let paragraphText = (textView.string as NSString).substring(with: paragraphRange)
-                let cleanedText = cleanLineOfListMarkers(paragraphText.trimmingCharacters(in: .whitespacesAndNewlines))
                 
-                if !cleanedText.isEmpty {
-                    // Replace paragraph text with cleaned text
-                    textView.replaceCharacters(in: paragraphRange, with: cleanedText)
-                    
-                    // Apply proper list formatting
-                    let newRange = NSRange(location: paragraphRange.location, length: cleanedText.count)
-                    let paragraphStyle = NSMutableParagraphStyle()
-                    paragraphStyle.textLists = [bulletList]
-                    paragraphStyle.headIndent = 20
-                    paragraphStyle.firstLineHeadIndent = 0
-                    
-                    textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: newRange)
-                }
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func convertSelectionToNumberedList(textView: NSTextView, range: NSRange) {
-            textView.textStorage?.beginEditing()
-            
-            // Get the paragraph ranges for the selection
-            let paragraphRanges = getParagraphRanges(in: textView.string, for: range)
-            
-            // Create proper NSTextList
-            let numberedList = NSTextList(markerFormat: .decimal, options: 0)
-            
-            for (_, paragraphRange) in paragraphRanges.enumerated().reversed() { // Process in reverse to maintain indices
-                let paragraphText = (textView.string as NSString).substring(with: paragraphRange)
-                let cleanedText = cleanLineOfListMarkers(paragraphText.trimmingCharacters(in: .whitespacesAndNewlines))
+                let newParagraphRange = NSRange(location: newCursorLocation, length: 0)
+                let newParagraphStyle = NSMutableParagraphStyle()
+                newParagraphStyle.textLists = [textList]
+                newParagraphStyle.headIndent = paragraphStyle.headIndent
+                newParagraphStyle.firstLineHeadIndent = paragraphStyle.firstLineHeadIndent
                 
-                if !cleanedText.isEmpty {
-                    // Replace paragraph text with cleaned text
-                    textView.replaceCharacters(in: paragraphRange, with: cleanedText)
-                    
-                    // Apply proper list formatting
-                    let newRange = NSRange(location: paragraphRange.location, length: cleanedText.count)
-                    let paragraphStyle = NSMutableParagraphStyle()
-                    paragraphStyle.textLists = [numberedList]
-                    paragraphStyle.headIndent = 25
-                    paragraphStyle.firstLineHeadIndent = 0
-                    
-                    textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: newRange)
-                }
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func getParagraphRanges(in text: String, for range: NSRange) -> [NSRange] {
-            var paragraphRanges: [NSRange] = []
-            let nsString = text as NSString
-            
-            nsString.enumerateSubstrings(in: range, options: [.byParagraphs, .substringNotRequired]) { (_, paragraphRange, _, _) in
-                paragraphRanges.append(paragraphRange)
-            }
-            
-            return paragraphRanges
-        }
-        
-        private func cleanLineOfListMarkers(_ line: String) -> String {
-            var cleanedLine = line
-            
-            // Remove bullet markers (• character)
-            if cleanedLine.hasPrefix("• ") {
-                cleanedLine = String(cleanedLine.dropFirst(2))
-            }
-            
-            // Remove numbered list markers (1. 2. etc.)
-            let numberPattern = #"^\d+\.\s*"#
-            if let regex = try? NSRegularExpression(pattern: numberPattern) {
-                let range = NSRange(location: 0, length: cleanedLine.count)
-                cleanedLine = regex.stringByReplacingMatches(in: cleanedLine, range: range, withTemplate: "")
-            }
-            
-            // Remove dash markers (- )
-            if cleanedLine.hasPrefix("- ") {
-                cleanedLine = String(cleanedLine.dropFirst(2))
-            }
-            
-            // Remove asterisk markers (* )
-            if cleanedLine.hasPrefix("* ") {
-                cleanedLine = String(cleanedLine.dropFirst(2))
-            }
-            
-            return cleanedLine
-        }
-        
-        private func insertProperBulletPointAtCursor(textView: NSTextView, range: NSRange) {
-            let insertionPoint = range.location
-            let text = textView.string
-            
-            // Determine if we need a newline
-            var needsNewline = false
-            if insertionPoint > 0 {
-                let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
-                needsNewline = previousChar != "\n"
-            }
-            
-            textView.textStorage?.beginEditing()
-            
-            // Insert newline if needed
-            if needsNewline {
-                textView.insertText("\n", replacementRange: range)
-                let newRange = NSRange(location: range.location + 1, length: 0)
-                insertBulletListAtRange(textView: textView, range: newRange)
-            } else {
-                insertBulletListAtRange(textView: textView, range: range)
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func insertProperNumberedItemAtCursor(textView: NSTextView, range: NSRange) {
-            let insertionPoint = range.location
-            let text = textView.string
-            
-            // Determine if we need a newline
-            var needsNewline = false
-            if insertionPoint > 0 {
-                let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
-                needsNewline = previousChar != "\n"
-            }
-            
-            textView.textStorage?.beginEditing()
-            
-            // Insert newline if needed
-            if needsNewline {
-                textView.insertText("\n", replacementRange: range)
-                let newRange = NSRange(location: range.location + 1, length: 0)
-                insertNumberedListAtRange(textView: textView, range: newRange)
-            } else {
-                insertNumberedListAtRange(textView: textView, range: range)
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func insertBulletListAtRange(textView: NSTextView, range: NSRange) {
-            // Get current paragraph range
-            let paragraphRange = (textView.string as NSString).paragraphRange(for: range)
-            
-            // Create proper NSTextList
-            let bulletList = NSTextList(markerFormat: .disc, options: 0)
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.textLists = [bulletList]
-            paragraphStyle.headIndent = 20
-            paragraphStyle.firstLineHeadIndent = 0
-            
-            // Apply list formatting to the paragraph
-            textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
-            
-            // Position cursor at end of paragraph if it's empty
-            if paragraphRange.length <= 1 { // Just newline character
-                textView.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
-            }
-        }
-        
-        private func insertNumberedListAtRange(textView: NSTextView, range: NSRange) {
-            // Get current paragraph range
-            let paragraphRange = (textView.string as NSString).paragraphRange(for: range)
-            
-            // Create proper NSTextList
-            let numberedList = NSTextList(markerFormat: .decimal, options: 0)
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.textLists = [numberedList]
-            paragraphStyle.headIndent = 25
-            paragraphStyle.firstLineHeadIndent = 0
-            
-            // Apply list formatting to the paragraph
-            textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
-            
-            // Position cursor at end of paragraph if it's empty
-            if paragraphRange.length <= 1 { // Just newline character
-                textView.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
-            }
-        }
-        
-        func insertLink() {
-            guard let textView = textView else { return }
-            
-            let selectedRange = textView.selectedRange()
-            
-            if selectedRange.length > 0 {
-                // Text is selected, wrap it in a link
-                let selectedText = textView.attributedString().attributedSubstring(from: selectedRange)
-                let linkText = "[\(selectedText.string)](url)"
+                let extendedRange = (textView.string as NSString).paragraphRange(for: newParagraphRange)
                 
-                textView.insertText(linkText, replacementRange: selectedRange)
-            } else {
-                // No selection, insert link template
-                let linkText = "[link text](url)"
-                textView.insertText(linkText, replacementRange: selectedRange)
-            }
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        func insertImage() {
-            guard let textView = textView else { return }
-            
-            let currentRange = textView.selectedRange()
-            let imageText = "![image description](image-url)"
-            
-            textView.insertText(imageText, replacementRange: currentRange)
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        private func shouldAddNewline(at range: NSRange) -> Bool {
-            guard let textView = textView else { return false }
-            
-            let text = textView.string
-            
-            // If text is empty, don't add newline
-            if text.isEmpty { return false }
-            
-            // If cursor is at the beginning, don't add newline
-            if range.location == 0 { return false }
-            
-            // Check if we're at the beginning of a line by looking at the character before cursor
-            if range.location > 0 {
-                let previousCharIndex = range.location - 1
-                if previousCharIndex < text.count {
-                    let previousChar = text[text.index(text.startIndex, offsetBy: previousCharIndex)]
-                    return previousChar != "\n"
+                // Safety check for extended range
+                guard extendedRange.location != NSNotFound &&
+                      extendedRange.location + extendedRange.length <= textView.string.count else {
+                    return true
                 }
-            }
-            
-            return true
-        }
-        
-        private func toggleBold(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.enumerateAttribute(.font, in: range, options: []) { font, subRange, _ in
-                if let currentFont = font as? NSFont {
-                    let isBold = currentFont.fontDescriptor.symbolicTraits.contains(.bold)
-                    let newFont = isBold ?
-                        NSFontManager.shared.convert(currentFont, toNotHaveTrait: .boldFontMask) :
-                        NSFontManager.shared.convert(currentFont, toHaveTrait: .boldFontMask)
-                    
-                    textView.textStorage?.addAttribute(.font, value: newFont, range: subRange)
-                }
-            }
-        }
-        
-        private func toggleItalic(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.enumerateAttribute(.font, in: range, options: []) { font, subRange, _ in
-                if let currentFont = font as? NSFont {
-                    let isItalic = currentFont.fontDescriptor.symbolicTraits.contains(.italic)
-                    let newFont = isItalic ?
-                        NSFontManager.shared.convert(currentFont, toNotHaveTrait: .italicFontMask) :
-                        NSFontManager.shared.convert(currentFont, toHaveTrait: .italicFontMask)
-                    
-                    textView.textStorage?.addAttribute(.font, value: newFont, range: subRange)
-                }
-            }
-        }
-        
-        private func toggleUnderline(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.enumerateAttribute(.underlineStyle, in: range, options: []) { underline, subRange, _ in
-                let currentUnderline = underline as? Int ?? 0
-                let newUnderline = currentUnderline == 0 ? NSUnderlineStyle.single.rawValue : 0
                 
-                if newUnderline == 0 {
-                    textView.textStorage?.removeAttribute(.underlineStyle, range: subRange)
+                textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: extendedRange)
+                
+                parent.attributedText = textView.attributedString()
+                parent.plainText = textView.attributedString().string
+                return true
+            }
+        }
+        
+        return false // Let the system handle the newline normally
+    }
+}
+
+// MARK: - WYSIWYG Formatting Methods 100082
+extension WYSIWYGRichTextEditor.Coordinator {
+    func applyFormatting(_ formatting: RichTextFormatting) {
+        guard let textView = textView else {
+            print("DEBUG: No textView available in applyFormatting")
+            return
+        }
+        
+        let selectedRange = textView.selectedRange()
+        print("DEBUG: Applying \(formatting) to range: \(selectedRange)")
+        
+        guard selectedRange.length > 0 else {
+            print("DEBUG: No text selected for formatting")
+            return
+        }
+        
+        textView.textStorage?.beginEditing()
+        
+        switch formatting {
+        case .bold:
+            toggleBold(in: selectedRange)
+        case .italic:
+            toggleItalic(in: selectedRange)
+        case .underline:
+            toggleUnderline(in: selectedRange)
+        case .strikethrough:
+            toggleStrikethrough(in: selectedRange)
+        }
+        
+        textView.textStorage?.endEditing()
+        
+        // Update parent binding
+        parent.attributedText = textView.attributedString()
+        parent.plainText = textView.attributedString().string
+        
+        print("DEBUG: Formatting applied successfully")
+    }
+    
+    private func toggleBold(in range: NSRange) {
+        guard let textView = textView else { return }
+        
+        // Get the current font at the selection
+        var currentFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        if let existingFont = textView.textStorage?.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont {
+            currentFont = existingFont
+        }
+        
+        // Create bold or unbold version
+        let isBold = currentFont.fontDescriptor.symbolicTraits.contains(.bold)
+        let newFont: NSFont
+        
+        if isBold {
+            // Remove bold
+            if let unboldFont = NSFontManager.shared.font(
+                withFamily: currentFont.familyName ?? "SF Pro",
+                traits: [],
+                weight: 5,
+                size: currentFont.pointSize
+            ) {
+                newFont = unboldFont
+            } else {
+                newFont = NSFont.systemFont(ofSize: currentFont.pointSize)
+            }
+        } else {
+            // Add bold
+            if let boldFont = NSFontManager.shared.font(
+                withFamily: currentFont.familyName ?? "SF Pro",
+                traits: .boldFontMask,
+                weight: 9,
+                size: currentFont.pointSize
+            ) {
+                newFont = boldFont
+            } else {
+                newFont = NSFont.boldSystemFont(ofSize: currentFont.pointSize)
+            }
+        }
+        
+        textView.textStorage?.addAttribute(.font, value: newFont, range: range)
+        print("DEBUG: Bold toggle - was bold: \(isBold), new font: \(newFont)")
+    }
+    
+    private func toggleItalic(in range: NSRange) {
+        guard let textView = textView else { return }
+        
+        // Get the current font at the selection
+        var currentFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        if let existingFont = textView.textStorage?.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont {
+            currentFont = existingFont
+        }
+        
+        // Create italic or unitalic version
+        let isItalic = currentFont.fontDescriptor.symbolicTraits.contains(.italic)
+        let newFont: NSFont
+        
+        if isItalic {
+            // Remove italic
+            if let unitalicFont = NSFontManager.shared.font(
+                withFamily: currentFont.familyName ?? "SF Pro",
+                traits: [],
+                weight: 5,
+                size: currentFont.pointSize
+            ) {
+                newFont = unitalicFont
+            } else {
+                newFont = NSFont.systemFont(ofSize: currentFont.pointSize)
+            }
+        } else {
+            // Add italic
+            if let italicFont = NSFontManager.shared.font(
+                withFamily: currentFont.familyName ?? "SF Pro",
+                traits: .italicFontMask,
+                weight: 5,
+                size: currentFont.pointSize
+            ) {
+                newFont = italicFont
+            } else {
+                // Fallback - try to get italic version another way
+                let descriptor = currentFont.fontDescriptor.withSymbolicTraits(.italic)
+                newFont = NSFont(descriptor: descriptor, size: currentFont.pointSize) ?? currentFont
+            }
+        }
+        
+        textView.textStorage?.addAttribute(.font, value: newFont, range: range)
+        print("DEBUG: Italic toggle - was italic: \(isItalic), new font: \(newFont)")
+    }
+    
+    private func toggleUnderline(in range: NSRange) {
+        guard let textView = textView else { return }
+        
+        textView.textStorage?.enumerateAttribute(.underlineStyle, in: range, options: []) { underline, subRange, _ in
+            let currentUnderline = underline as? Int ?? 0
+            let newUnderline = currentUnderline == 0 ? NSUnderlineStyle.single.rawValue : 0
+            
+            if newUnderline == 0 {
+                textView.textStorage?.removeAttribute(.underlineStyle, range: subRange)
+            } else {
+                textView.textStorage?.addAttribute(.underlineStyle, value: newUnderline, range: subRange)
+            }
+        }
+    }
+    
+    private func toggleStrikethrough(in range: NSRange) {
+        guard let textView = textView else { return }
+        
+        textView.textStorage?.enumerateAttribute(.strikethroughStyle, in: range, options: []) { strikethrough, subRange, _ in
+            let currentStrike = strikethrough as? Int ?? 0
+            let newStrike = currentStrike == 0 ? NSUnderlineStyle.single.rawValue : 0
+            
+            if newStrike == 0 {
+                textView.textStorage?.removeAttribute(.strikethroughStyle, range: subRange)
+            } else {
+                textView.textStorage?.addAttribute(.strikethroughStyle, value: newStrike, range: subRange)
+            }
+        }
+    }
+}
+
+// MARK: - WYSIWYG List Methods 100083
+extension WYSIWYGRichTextEditor.Coordinator {
+    func insertBulletList() {
+        guard let textView = textView else {
+            print("DEBUG: No textView available in insertBulletList")
+            return
+        }
+        
+        print("DEBUG: Inserting bullet list")
+        
+        let selectedRange = textView.selectedRange()
+        
+        if selectedRange.length > 0 {
+            // Text is selected - convert selected lines to bullet list
+            convertSelectionToBulletList(textView: textView, range: selectedRange)
+        } else {
+            // No selection - insert bullet point at cursor
+            insertBulletPointAtCursor(textView: textView, range: selectedRange)
+        }
+        
+        // Update parent binding
+        parent.attributedText = textView.attributedString()
+        parent.plainText = textView.attributedString().string
+        
+        print("DEBUG: Bullet list inserted successfully")
+    }
+    
+    func insertNumberedList() {
+        guard let textView = textView else {
+            print("DEBUG: No textView available in insertNumberedList")
+            return
+        }
+        
+        print("DEBUG: Inserting numbered list")
+        
+        let selectedRange = textView.selectedRange()
+        
+        if selectedRange.length > 0 {
+            // Text is selected - convert selected lines to numbered list
+            convertSelectionToNumberedList(textView: textView, range: selectedRange)
+        } else {
+            // No selection - insert numbered item at cursor
+            insertNumberedItemAtCursor(textView: textView, range: selectedRange)
+        }
+        
+        // Update parent binding
+        parent.attributedText = textView.attributedString()
+        parent.plainText = textView.attributedString().string
+        
+        print("DEBUG: Numbered list inserted successfully")
+    }
+    
+    private func insertBulletPointAtCursor(textView: NSTextView, range: NSRange) {
+        let insertionPoint = range.location
+        let text = textView.string
+        
+        var textToInsert = "• "
+        
+        // Check if we need a newline before the bullet
+        if insertionPoint > 0 && insertionPoint <= text.count {
+            let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
+            if previousChar != "\n" {
+                textToInsert = "\n• "
+            }
+        }
+        
+        // Insert the bullet point
+        textView.insertText(textToInsert, replacementRange: range)
+        
+        print("DEBUG: Inserted bullet point: '\(textToInsert)'")
+    }
+    
+    private func insertNumberedItemAtCursor(textView: NSTextView, range: NSRange) {
+        let insertionPoint = range.location
+        let text = textView.string
+        
+        // Find the next number to use
+        let nextNumber = getNextListNumber(in: text, at: insertionPoint)
+        var textToInsert = "\(nextNumber). "
+        
+        // Check if we need a newline before the number
+        if insertionPoint > 0 && insertionPoint <= text.count {
+            let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
+            if previousChar != "\n" {
+                textToInsert = "\n\(nextNumber). "
+            }
+        }
+        
+        // Insert the numbered item
+        textView.insertText(textToInsert, replacementRange: range)
+        
+        print("DEBUG: Inserted numbered item: '\(textToInsert)'")
+    }
+    
+    private func getNextListNumber(in text: String, at position: Int) -> Int {
+        // Look backwards to find existing numbered list items
+        let lines = text.components(separatedBy: .newlines)
+        var maxNumber = 0
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if let match = trimmed.range(of: #"^\d+\."#, options: .regularExpression) {
+                let numberString = String(trimmed[match]).dropLast() // Remove the period
+                if let number = Int(numberString) {
+                    maxNumber = max(maxNumber, number)
+                }
+            }
+        }
+        
+        return maxNumber + 1
+    }
+    
+    func insertLink() {
+        guard let textView = textView else { return }
+        
+        let selectedRange = textView.selectedRange()
+        
+        if selectedRange.length > 0 {
+            // Text is selected, wrap it in a link
+            let selectedText = textView.attributedString().attributedSubstring(from: selectedRange)
+            let linkText = "[\(selectedText.string)](url)"
+            
+            textView.insertText(linkText, replacementRange: selectedRange)
+        } else {
+            // No selection, insert link template
+            let linkText = "[link text](url)"
+            textView.insertText(linkText, replacementRange: selectedRange)
+        }
+        
+        // Update parent binding
+        parent.attributedText = textView.attributedString()
+        parent.plainText = textView.attributedString().string
+    }
+    
+    func insertImage() {
+        guard let textView = textView else { return }
+        
+        let currentRange = textView.selectedRange()
+        let imageText = "![image description](image-url)"
+        
+        textView.insertText(imageText, replacementRange: currentRange)
+        
+        // Update parent binding
+        parent.attributedText = textView.attributedString()
+        parent.plainText = textView.attributedString().string
+    }
+}
+
+// MARK: - WYSIWYG List Conversion Methods 100084
+extension WYSIWYGRichTextEditor.Coordinator {
+    private func convertSelectionToBulletList(textView: NSTextView, range: NSRange) {
+        let selectedText = (textView.string as NSString).substring(with: range)
+        let lines = selectedText.components(separatedBy: .newlines)
+        
+        // Check if selection is already a bullet list
+        let isBulletList = lines.allSatisfy { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty || trimmed.hasPrefix("• ")
+        }
+        
+        var convertedLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                if isBulletList {
+                    // Remove bullet markers
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append(cleaned)
+                    print("DEBUG: Removed bullet from: '\(trimmed)' -> '\(cleaned)'")
                 } else {
-                    textView.textStorage?.addAttribute(.underlineStyle, value: newUnderline, range: subRange)
+                    // Add bullet markers
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append("• \(cleaned)")
+                    print("DEBUG: Added bullet to: '\(trimmed)' -> '• \(cleaned)'")
                 }
+            } else {
+                convertedLines.append("")
             }
         }
         
-        private func toggleStrikethrough(in range: NSRange) {
-            guard let textView = textView else { return }
+        let convertedText = convertedLines.joined(separator: "\n")
+        textView.insertText(convertedText, replacementRange: range)
+        
+        print("DEBUG: Converted selection - was bullet list: \(isBulletList)")
+    }
+    
+    private func convertSelectionToNumberedList(textView: NSTextView, range: NSRange) {
+        let selectedText = (textView.string as NSString).substring(with: range)
+        let lines = selectedText.components(separatedBy: .newlines)
+        
+        // Check if selection is already a numbered list
+        let isNumberedList = lines.allSatisfy { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { return true }
             
-            textView.textStorage?.enumerateAttribute(.strikethroughStyle, in: range, options: []) { strikethrough, subRange, _ in
-                let currentStrike = strikethrough as? Int ?? 0
-                let newStrike = currentStrike == 0 ? NSUnderlineStyle.single.rawValue : 0
-                
-                if newStrike == 0 {
-                    textView.textStorage?.removeAttribute(.strikethroughStyle, range: subRange)
+            // Check if line starts with number followed by period and space
+            let pattern = #"^\d+\.\s+"#
+            return trimmed.range(of: pattern, options: .regularExpression) != nil
+        }
+        
+        var convertedLines: [String] = []
+        var itemNumber = 1
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                if isNumberedList {
+                    // Remove number markers
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append(cleaned)
+                    print("DEBUG: Removed number from: '\(trimmed)' -> '\(cleaned)'")
                 } else {
-                    textView.textStorage?.addAttribute(.strikethroughStyle, value: newStrike, range: subRange)
+                    // Add number markers
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append("\(itemNumber). \(cleaned)")
+                    print("DEBUG: Added number to: '\(trimmed)' -> '\(itemNumber). \(cleaned)'")
+                    itemNumber += 1
                 }
+            } else {
+                convertedLines.append("")
             }
         }
+        
+        let convertedText = convertedLines.joined(separator: "\n")
+        textView.insertText(convertedText, replacementRange: range)
+        
+        print("DEBUG: Converted selection - was numbered list: \(isNumberedList)")
+    }
+    
+    private func cleanLineOfListMarkers(_ line: String) -> String {
+        var cleanedLine = line
+        
+        // Remove bullet markers (• character)
+        if cleanedLine.hasPrefix("• ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        // Remove numbered list markers (1. 2. etc.) - more precise pattern
+        let numberPattern = #"^\d+\.\s+"#
+        if let regex = try? NSRegularExpression(pattern: numberPattern) {
+            let range = NSRange(location: 0, length: cleanedLine.count)
+            let matches = regex.matches(in: cleanedLine, range: range)
+            if let match = matches.first {
+                cleanedLine = (cleanedLine as NSString).replacingCharacters(in: match.range, with: "")
+            }
+        }
+        
+        // Remove dash markers (- )
+        if cleanedLine.hasPrefix("- ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        // Remove asterisk markers (* )
+        if cleanedLine.hasPrefix("* ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        return cleanedLine
     }
 }
