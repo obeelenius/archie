@@ -116,18 +116,18 @@ extension AddSnippetSlideOut {
                     Button("Create") {
                         saveSnippet()
                     }
-                    .disabled(shortcut.isEmpty || expansion.isEmpty)
+                    .disabled(shortcut.isEmpty || expansionPlain.isEmpty)
                     .foregroundColor(.white)
                     .font(.system(size: 12, weight: .semibold))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 5)
-                            .fill((shortcut.isEmpty || expansion.isEmpty) ? Color.gray : Color.accentColor)
+                            .fill((shortcut.isEmpty || expansionPlain.isEmpty) ? Color.gray : Color.accentColor)
                     )
                     .buttonStyle(.plain)
                     
-                    if !shortcut.isEmpty || !expansion.isEmpty {
+                    if !shortcut.isEmpty || !expansionPlain.isEmpty {
                         Button("Clear") {
                             clearDraftData()
                         }
@@ -237,28 +237,58 @@ extension AddSnippetSlideOut {
                     .foregroundColor(.secondary)
             }
             
-            // Expansion field with rich text support
-            VStack(alignment: .leading, spacing: 12) {
+            // Expansion field with toolbar
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Expansion")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                // Rich text editor with formatting toolbar
-                RichTextEditorWithToolbar(
-                    attributedText: Binding(
-                        get: { expansionAttributed },
-                        set: { newValue in
-                            expansionAttributed = newValue
-                            // Also save plain text version for persistence
-                            expansionPlain = newValue.string
-                        }
-                    ),
-                    placeholder: "Replacement text..."
+                VStack(spacing: 0) {
+                    // Formatting toolbar
+                    formattingToolbar
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(
+                            .rect(
+                                topLeadingRadius: 6,
+                                bottomLeadingRadius: 0,
+                                bottomTrailingRadius: 0,
+                                topTrailingRadius: 6
+                            )
+                        )
+                    
+                    // Separator line between toolbar and editor
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(height: 1)
+                    
+                    // Text editor
+                    ZStack(alignment: .topLeading) {
+                        TextEditor(text: $expansionPlain)
+                            .font(.system(.body))
+                            .scrollContentBackground(.hidden)
+                            .scrollDisabled(true)
+                            .background(Color.clear)
+                    }
+                    .padding(10)
+                    .frame(minHeight: 120)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(
+                        .rect(
+                            topLeadingRadius: 0,
+                            bottomLeadingRadius: 6,
+                            bottomTrailingRadius: 6,
+                            topTrailingRadius: 0
+                        )
+                    )
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(NSColor.textBackgroundColor))
+                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                 )
-                .frame(minHeight: 120)
                 
                 HStack {
-                    Text("Select text and use toolbar to format. Supports variables and rich text.")
+                    Text("Supports variables and line breaks")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     
@@ -279,7 +309,7 @@ extension AddSnippetSlideOut {
                     .buttonStyle(.plain)
                 }
                 
-                // Enhanced Variables Section (simplified)
+                // Enhanced Variables Section
                 enhancedVariablesSection
             }
         }
@@ -289,8 +319,74 @@ extension AddSnippetSlideOut {
                 .fill(Color(NSColor.controlBackgroundColor))
         )
     }
+    
+    private var formattingToolbar: some View {
+        HStack(spacing: 4) {
+            // Bold
+            ToolbarButton(icon: "bold", format: "**text**") {
+                insertFormatting("**", "**")
+            }
+            
+            // Italic
+            ToolbarButton(icon: "italic", format: "*text*") {
+                insertFormatting("*", "*")
+            }
+            
+            // Underline
+            ToolbarButton(icon: "underline", format: "__text__") {
+                insertFormatting("__", "__")
+            }
+            
+            // Strikethrough
+            ToolbarButton(icon: "strikethrough", format: "~~text~~") {
+                insertFormatting("~~", "~~")
+            }
+            
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(width: 1, height: 20)
+                .padding(.horizontal, 4)
+            
+            // Bullet list
+            ToolbarButton(icon: "list.bullet", format: "- item") {
+                insertAtCursor("- ")
+            }
+            
+            // Numbered list
+            ToolbarButton(icon: "list.number", format: "1. item") {
+                insertAtCursor("1. ")
+            }
+            
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(width: 1, height: 20)
+                .padding(.horizontal, 4)
+            
+            // Link (placeholder)
+            ToolbarButton(icon: "link", format: "[text](url)") {
+                insertFormatting("[", "](url)")
+            }
+            
+            // Image (placeholder)
+            ToolbarButton(icon: "photo", format: "![alt](url)") {
+                insertFormatting("![", "](url)")
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+    
+    private func insertFormatting(_ prefix: String, _ suffix: String) {
+        // Simple insertion at the end for now
+        expansionPlain += prefix + "text" + suffix
+    }
+    
+    private func insertAtCursor(_ text: String) {
+        expansionPlain += text
+    }
 }
-
 // MARK: - Format Toolbar Button Component 100061
 struct FormatToolbarButton: View {
     let format: String
@@ -381,7 +477,7 @@ extension AddSnippetSlideOut {
                 EnhancedVariableInfo(variable: "{{date-long}}", title: "Full Date", example: getCurrentLongDateExample()),
                 EnhancedVariableInfo(variable: "{{date-iso}}", title: "ISO Format", example: getCurrentISODateExample())
             ],
-            expansion: $expansion
+            expansionPlain: $expansionPlain
         )
     }
     
@@ -395,7 +491,7 @@ extension AddSnippetSlideOut {
                 EnhancedVariableInfo(variable: "{{time-12}}", title: "12-Hour + AM/PM", example: getCurrent12HourExample()),
                 EnhancedVariableInfo(variable: "{{time-seconds}}", title: "With Seconds", example: getCurrentTimeWithSecondsExample())
             ],
-            expansion: $expansion
+            expansionPlain: $expansionPlain
         )
     }
     
@@ -409,7 +505,7 @@ extension AddSnippetSlideOut {
                 EnhancedVariableInfo(variable: "{{date-7}}", title: "Week Ago", example: getWeekAgoExample()),
                 EnhancedVariableInfo(variable: "{{date+7}}", title: "Week From Now", example: getWeekFromNowExample())
             ],
-            expansion: $expansion
+            expansionPlain: $expansionPlain
         )
     }
     
@@ -425,7 +521,7 @@ extension AddSnippetSlideOut {
                 EnhancedVariableInfo(variable: "{{year}}", title: "Year", example: getCurrentYearExample()),
                 EnhancedVariableInfo(variable: "{{timestamp}}", title: "Unix Timestamp", example: getCurrentTimestampExample())
             ],
-            expansion: $expansion
+            expansionPlain: $expansionPlain
         )
     }
 }
@@ -637,7 +733,7 @@ struct EnhancedVariableGroup: View {
     let title: String
     let color: Color
     let variables: [EnhancedVariableInfo]
-    @Binding var expansion: String
+    @Binding var expansionPlain: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -650,7 +746,7 @@ struct EnhancedVariableGroup: View {
                     EnhancedAddVariableButton(
                         variableInfo: variableInfo,
                         color: color,
-                        expansion: $expansion
+                        expansionPlain: $expansionPlain
                     )
                 }
             }
@@ -662,13 +758,13 @@ struct EnhancedVariableGroup: View {
 struct EnhancedAddVariableButton: View {
     let variableInfo: EnhancedVariableInfo
     let color: Color
-    @Binding var expansion: String
+    @Binding var expansionPlain: String
     @State private var isPressed = false
     @State private var isHovered = false
     
     var body: some View {
         Button(action: {
-            expansion += variableInfo.variable
+            expansionPlain += variableInfo.variable
         }) {
             VStack(alignment: .leading, spacing: 4) {
                 // Variable code
@@ -843,5 +939,149 @@ struct AddFlowResult {
         }
         
         bounds = CGSize(width: rect.width, height: currentY + lineHeight)
+    }
+}
+
+// MARK: - Rich Text Format Models 100073
+struct RichTextFormatInfo {
+    let format: String
+    let title: String
+    let example: String
+    let color: Color
+}
+
+// MARK: - Rich Text Format Button Component 100074
+struct RichTextFormatButton: View {
+    let formatInfo: RichTextFormatInfo
+    @Binding var expansionPlain: String
+    @State private var isPressed = false
+    @State private var isHovered = false
+    
+    var body: some View {
+        Button(action: {
+            expansionPlain += formatInfo.format
+        }) {
+            VStack(alignment: .leading, spacing: 4) {
+                // Format code
+                Text(formatInfo.format)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(formatInfo.color)
+                
+                // Title
+                Text(formatInfo.title)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                // Example
+                Text(formatInfo.example)
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(width: 100, alignment: .leading)
+            .background(buttonBackground)
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.96 : (isHovered ? 1.02 : 1.0))
+        .animation(.easeInOut(duration: 0.1), value: isPressed)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+        .help("\(formatInfo.title) - Example: \(formatInfo.example)")
+    }
+    
+    private var buttonBackground: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(buttonBackgroundColor)
+            .stroke(buttonBorderColor, lineWidth: 1)
+            .shadow(
+                color: .black.opacity(isPressed ? 0.1 : 0.04),
+                radius: isPressed ? 1 : 3,
+                x: 0,
+                y: isPressed ? 0.5 : 1.5
+            )
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isPressed {
+            return formatInfo.color.opacity(0.15)
+        } else if isHovered {
+            return formatInfo.color.opacity(0.08)
+        } else {
+            return Color(NSColor.controlBackgroundColor)
+        }
+    }
+    
+    private var buttonBorderColor: Color {
+        if isPressed {
+            return formatInfo.color.opacity(0.4)
+        } else if isHovered {
+            return formatInfo.color.opacity(0.3)
+        } else {
+            return Color(NSColor.separatorColor).opacity(0.3)
+        }
+    }
+}
+
+// MARK: - Toolbar Button Component 100075
+struct ToolbarButton: View {
+    let icon: String
+    let format: String
+    let action: () -> Void
+    
+    @State private var isPressed = false
+    @State private var isHovered = false
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+                .frame(width: 28, height: 28)
+                .background(buttonBackgroundColor)
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+        .help(helpText)
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isPressed {
+            return Color(NSColor.controlAccentColor).opacity(0.3)
+        } else if isHovered {
+            return Color(NSColor.controlBackgroundColor).opacity(0.8)
+        } else {
+            return Color.clear
+        }
+    }
+    
+    private var helpText: String {
+        switch icon {
+        case "bold": return "Bold (**text**)"
+        case "italic": return "Italic (*text*)"
+        case "underline": return "Underline (__text__)"
+        case "strikethrough": return "Strikethrough (~~text~~)"
+        case "list.bullet": return "Bullet List (- item)"
+        case "list.number": return "Numbered List (1. item)"
+        case "link": return "Link ([text](url))"
+        case "photo": return "Image (![alt](url))"
+        default: return format
+        }
     }
 }
