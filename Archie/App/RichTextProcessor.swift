@@ -108,33 +108,110 @@ extension RichTextProcessor {
     private func processLists(_ attributedString: NSMutableAttributedString) {
         let text = attributedString.string
         let lines = text.components(separatedBy: .newlines)
-        var processedLines: [String] = []
-        var numberedListCounter = 1
+        let processedText = NSMutableAttributedString()
         
-        for line in lines {
+        var i = 0
+        while i < lines.count {
+            let line = lines[i]
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
             
-            if trimmedLine.hasPrefix("- ") || trimmedLine.hasPrefix("* ") {
-                // Bullet point
+            // Handle bullet points (- or * or •)
+            if trimmedLine.hasPrefix("- ") || trimmedLine.hasPrefix("* ") || trimmedLine.hasPrefix("• ") {
                 let content = String(trimmedLine.dropFirst(2))
-                processedLines.append("• \(content)")
-            } else if trimmedLine.hasPrefix("1. ") || 
-                      (trimmedLine.hasPrefix("\(numberedListCounter). ")) {
-                // Numbered list
-                let content = String(trimmedLine.dropFirst(3))
-                processedLines.append("\(numberedListCounter). \(content)")
-                numberedListCounter += 1
-            } else {
-                // Reset counter if not a numbered list
-                if !trimmedLine.isEmpty {
-                    numberedListCounter = 1
+                let bulletLine = NSMutableAttributedString(string: content)
+                
+                // Create proper bullet list formatting
+                let bulletList = NSTextList(markerFormat: .disc, options: 0)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.textLists = [bulletList]
+                paragraphStyle.headIndent = 20
+                paragraphStyle.firstLineHeadIndent = 0
+                
+                let fullRange = NSRange(location: 0, length: bulletLine.length)
+                bulletLine.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
+                
+                processedText.append(bulletLine)
+                
+                // Add newline if not last line
+                if i < lines.count - 1 {
+                    processedText.append(NSAttributedString(string: "\n"))
                 }
-                processedLines.append(line)
             }
+            // Handle numbered lists (1. 2. etc.)
+            else if let match = matchNumberedListItem(trimmedLine) {
+                let content = match.content
+                let numberedLine = NSMutableAttributedString(string: content)
+                
+                // Create proper numbered list formatting
+                let numberedList = NSTextList(markerFormat: .decimal, options: 0)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.textLists = [numberedList]
+                paragraphStyle.headIndent = 25
+                paragraphStyle.firstLineHeadIndent = 0
+                
+                let fullRange = NSRange(location: 0, length: numberedLine.length)
+                numberedLine.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
+                
+                processedText.append(numberedLine)
+                
+                // Add newline if not last line
+                if i < lines.count - 1 {
+                    processedText.append(NSAttributedString(string: "\n"))
+                }
+            }
+            else {
+                // Regular line - just add as plain text
+                let regularLine = NSMutableAttributedString(string: line)
+                processedText.append(regularLine)
+                
+                // Add newline if not last line
+                if i < lines.count - 1 {
+                    processedText.append(NSAttributedString(string: "\n"))
+                }
+            }
+            
+            i += 1
         }
         
-        let processedText = processedLines.joined(separator: "\n")
-        attributedString.replaceCharacters(in: NSRange(location: 0, length: text.count), with: processedText)
+        // Replace the original content with processed content
+        attributedString.replaceCharacters(in: NSRange(location: 0, length: attributedString.length), with: processedText)
+    }
+    
+    private func matchNumberedListItem(_ line: String) -> (number: Int, content: String)? {
+        let pattern = #"^(\d+)\.\s*(.*)"#
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: line, range: NSRange(location: 0, length: line.count)) else {
+            return nil
+        }
+        
+        let numberRange = match.range(at: 1)
+        let contentRange = match.range(at: 2)
+        
+        guard numberRange.location != NSNotFound,
+              contentRange.location != NSNotFound else {
+            return nil
+        }
+        
+        let numberString = (line as NSString).substring(with: numberRange)
+        let content = (line as NSString).substring(with: contentRange)
+        
+        guard let number = Int(numberString) else {
+            return nil
+        }
+        
+        return (number: number, content: content)
+    }
+}
+
+// MARK: - String Extension for Pattern Matching 100430
+extension String {
+    func matches(_ pattern: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return false
+        }
+        let range = NSRange(location: 0, length: self.count)
+        return regex.firstMatch(in: self, range: range) != nil
     }
 }
 

@@ -277,12 +277,12 @@ extension AddSnippetSlideOut {
                             
                             // Bullet list
                             ToolbarButton(icon: "list.bullet", format: "- item") {
-                                editorCoordinator?.insertBulletPoint()
+                                editorCoordinator?.insertBulletList()
                             }
                             
                             // Numbered list
                             ToolbarButton(icon: "list.number", format: "1. item") {
-                                editorCoordinator?.insertNumberedItem()
+                                editorCoordinator?.insertNumberedList()
                             }
                             
                             Rectangle()
@@ -1226,60 +1226,43 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
         
         private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
             let currentRange = textView.selectedRange()
-            let text = textView.string
             
-            // Find the current line
-            guard currentRange.location > 0 else { return false }
+            // Check if we're in a list by examining paragraph style
+            let paragraphRange = (textView.string as NSString).paragraphRange(for: currentRange)
             
-            // Get the current line content
-            let currentLineStart = findLineStart(in: text, from: currentRange.location)
-            let currentLineEnd = findLineEnd(in: text, from: currentRange.location)
-            
-            if currentLineStart < text.count && currentLineEnd <= text.count {
-                let lineRange = NSRange(location: currentLineStart, length: currentLineEnd - currentLineStart)
-                let lineText = (text as NSString).substring(with: lineRange)
+            if let paragraphStyle = textView.textStorage?.attribute(.paragraphStyle, at: currentRange.location, effectiveRange: nil) as? NSParagraphStyle,
+               !paragraphStyle.textLists.isEmpty {
                 
-                // Check if current line is a bullet point
-                if lineText.hasPrefix("• ") {
-                    let remainingText = String(lineText.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-                    
-                    if remainingText.isEmpty {
-                        // Empty bullet point - remove it and just insert newline
-                        let bulletRange = NSRange(location: currentLineStart, length: 2)
-                        textView.replaceCharacters(in: bulletRange, with: "")
-                        return true
-                    } else {
-                        // Non-empty bullet - continue the list
-                        textView.insertText("\n• ", replacementRange: currentRange)
-                        parent.attributedText = textView.attributedString()
-                        parent.plainText = textView.attributedString().string
-                        return true
-                    }
-                }
+                let textList = paragraphStyle.textLists.first!
+                let currentText = (textView.string as NSString).substring(with: paragraphRange).trimmingCharacters(in: .whitespacesAndNewlines)
                 
-                // Check if current line is a numbered item
-                let numberPattern = #"^(\d+)\. "#
-                if let regex = try? NSRegularExpression(pattern: numberPattern),
-                   let match = regex.firstMatch(in: lineText, range: NSRange(location: 0, length: lineText.count)) {
+                if currentText.isEmpty {
+                    // Empty list item - exit the list
+                    let newParagraphStyle = NSMutableParagraphStyle()
+                    newParagraphStyle.textLists = []
+                    newParagraphStyle.headIndent = 0
+                    newParagraphStyle.firstLineHeadIndent = 0
                     
-                    let numberRange = match.range(at: 1)
-                    let currentNumber = Int((lineText as NSString).substring(with: numberRange)) ?? 1
-                    let remainingText = lineText.replacingOccurrences(of: #"^\d+\. "#, with: "", options: .regularExpression)
+                    textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: paragraphRange)
+                    return false // Let system handle the newline
+                } else {
+                    // Non-empty list item - continue the list
+                    textView.insertText("\n", replacementRange: currentRange)
                     
-                    if remainingText.trimmingCharacters(in: .whitespaces).isEmpty {
-                        // Empty numbered item - remove it and just insert newline
-                        let numberPrefix = "\(currentNumber). "
-                        let prefixRange = NSRange(location: currentLineStart, length: numberPrefix.count)
-                        textView.replaceCharacters(in: prefixRange, with: "")
-                        return true
-                    } else {
-                        // Non-empty numbered item - continue the list
-                        let nextNumber = currentNumber + 1
-                        textView.insertText("\n\(nextNumber). ", replacementRange: currentRange)
-                        parent.attributedText = textView.attributedString()
-                        parent.plainText = textView.attributedString().string
-                        return true
-                    }
+                    // Apply same list formatting to new paragraph
+                    let newCursorLocation = currentRange.location + 1
+                    let newParagraphRange = NSRange(location: newCursorLocation, length: 0)
+                    let newParagraphStyle = NSMutableParagraphStyle()
+                    newParagraphStyle.textLists = [textList]
+                    newParagraphStyle.headIndent = paragraphStyle.headIndent
+                    newParagraphStyle.firstLineHeadIndent = paragraphStyle.firstLineHeadIndent
+                    
+                    let extendedRange = (textView.string as NSString).paragraphRange(for: newParagraphRange)
+                    textView.textStorage?.addAttribute(.paragraphStyle, value: newParagraphStyle, range: extendedRange)
+                    
+                    parent.attributedText = textView.attributedString()
+                    parent.plainText = textView.attributedString().string
+                    return true
                 }
             }
             
@@ -1328,17 +1311,17 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
             parent.plainText = textView.attributedString().string
         }
         
-        func insertBulletPoint() {
+        func insertBulletList() {
             guard let textView = textView else { return }
             
             let selectedRange = textView.selectedRange()
             
             if selectedRange.length > 0 {
-                // Text is selected - toggle bullet list formatting
-                toggleBulletList(in: selectedRange)
+                // Text is selected - convert selected lines to proper bullet list
+                convertSelectionToBulletList(textView: textView, range: selectedRange)
             } else {
-                // No selection - start a bullet list at cursor
-                startBulletList(at: selectedRange)
+                // No selection - insert bullet point at cursor with proper formatting
+                insertProperBulletPointAtCursor(textView: textView, range: selectedRange)
             }
             
             // Update parent binding
@@ -1346,17 +1329,17 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
             parent.plainText = textView.attributedString().string
         }
         
-        func insertNumberedItem() {
+        func insertNumberedList() {
             guard let textView = textView else { return }
             
             let selectedRange = textView.selectedRange()
             
             if selectedRange.length > 0 {
-                // Text is selected - toggle numbered list formatting
-                toggleNumberedList(in: selectedRange)
+                // Text is selected - convert selected lines to proper numbered list
+                convertSelectionToNumberedList(textView: textView, range: selectedRange)
             } else {
-                // No selection - start a numbered list at cursor
-                startNumberedList(at: selectedRange)
+                // No selection - insert numbered item at cursor with proper formatting
+                insertProperNumberedItemAtCursor(textView: textView, range: selectedRange)
             }
             
             // Update parent binding
@@ -1364,188 +1347,195 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
             parent.plainText = textView.attributedString().string
         }
         
-        private func toggleBulletList(in range: NSRange) {
-            guard let textView = textView else { return }
-            
+        private func convertSelectionToBulletList(textView: NSTextView, range: NSRange) {
             textView.textStorage?.beginEditing()
             
-            // Check if the selection already has bullet list formatting
-            let hasExistingBullets = checkForExistingBulletList(in: range)
+            // Get the paragraph ranges for the selection
+            let paragraphRanges = getParagraphRanges(in: textView.string, for: range)
             
-            if hasExistingBullets {
-                // Remove bullet list formatting
-                removeBulletList(in: range)
-            } else {
-                // Apply bullet list formatting
-                applyBulletList(in: range)
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func toggleNumberedList(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.beginEditing()
-            
-            // Check if the selection already has numbered list formatting
-            let hasExistingNumbers = checkForExistingNumberedList(in: range)
-            
-            if hasExistingNumbers {
-                // Remove numbered list formatting
-                removeNumberedList(in: range)
-            } else {
-                // Apply numbered list formatting
-                applyNumberedList(in: range)
-            }
-            
-            textView.textStorage?.endEditing()
-        }
-        
-        private func applyBulletList(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            // Create bullet list
+            // Create proper NSTextList
             let bulletList = NSTextList(markerFormat: .disc, options: 0)
             
-            // Apply to each paragraph in the range
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, paragraphRange, _ in
-                let paragraphStyle = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            for paragraphRange in paragraphRanges.reversed() { // Process in reverse to maintain indices
+                let paragraphText = (textView.string as NSString).substring(with: paragraphRange)
+                let cleanedText = cleanLineOfListMarkers(paragraphText.trimmingCharacters(in: .whitespacesAndNewlines))
                 
-                // Add the text list to the paragraph style
-                paragraphStyle.textLists = [bulletList]
-                paragraphStyle.headIndent = 20 // Indent for bullet
-                paragraphStyle.firstLineHeadIndent = 0
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+                if !cleanedText.isEmpty {
+                    // Replace paragraph text with cleaned text
+                    textView.replaceCharacters(in: paragraphRange, with: cleanedText)
+                    
+                    // Apply proper list formatting
+                    let newRange = NSRange(location: paragraphRange.location, length: cleanedText.count)
+                    let paragraphStyle = NSMutableParagraphStyle()
+                    paragraphStyle.textLists = [bulletList]
+                    paragraphStyle.headIndent = 20
+                    paragraphStyle.firstLineHeadIndent = 0
+                    
+                    textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: newRange)
+                }
             }
+            
+            textView.textStorage?.endEditing()
         }
         
-        private func applyNumberedList(in range: NSRange) {
-            guard let textView = textView else { return }
+        private func convertSelectionToNumberedList(textView: NSTextView, range: NSRange) {
+            textView.textStorage?.beginEditing()
             
-            // Create numbered list
+            // Get the paragraph ranges for the selection
+            let paragraphRanges = getParagraphRanges(in: textView.string, for: range)
+            
+            // Create proper NSTextList
             let numberedList = NSTextList(markerFormat: .decimal, options: 0)
             
-            // Apply to each paragraph in the range
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, paragraphRange, _ in
-                let paragraphStyle = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            for (_, paragraphRange) in paragraphRanges.enumerated().reversed() { // Process in reverse to maintain indices
+                let paragraphText = (textView.string as NSString).substring(with: paragraphRange)
+                let cleanedText = cleanLineOfListMarkers(paragraphText.trimmingCharacters(in: .whitespacesAndNewlines))
                 
-                // Add the text list to the paragraph style
-                paragraphStyle.textLists = [numberedList]
-                paragraphStyle.headIndent = 20 // Indent for number
-                paragraphStyle.firstLineHeadIndent = 0
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
-            }
-        }
-        
-        private func removeBulletList(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, paragraphRange, _ in
-                let paragraphStyle = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
-                
-                // Remove text lists and reset indentation
-                paragraphStyle.textLists = []
-                paragraphStyle.headIndent = 0
-                paragraphStyle.firstLineHeadIndent = 0
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
-            }
-        }
-        
-        private func removeNumberedList(in range: NSRange) {
-            guard let textView = textView else { return }
-            
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, paragraphRange, _ in
-                let paragraphStyle = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
-                
-                // Remove text lists and reset indentation
-                paragraphStyle.textLists = []
-                paragraphStyle.headIndent = 0
-                paragraphStyle.firstLineHeadIndent = 0
-                
-                textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
-            }
-        }
-        
-        private func checkForExistingBulletList(in range: NSRange) -> Bool {
-            guard let textView = textView else { return false }
-            
-            var hasBullets = false
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, _, _ in
-                if let paragraphStyle = value as? NSParagraphStyle {
-                    let textLists = paragraphStyle.textLists
-                    if !textLists.isEmpty && textLists.first?.markerFormat == .disc {
-                        hasBullets = true
-                    }
+                if !cleanedText.isEmpty {
+                    // Replace paragraph text with cleaned text
+                    textView.replaceCharacters(in: paragraphRange, with: cleanedText)
+                    
+                    // Apply proper list formatting
+                    let newRange = NSRange(location: paragraphRange.location, length: cleanedText.count)
+                    let paragraphStyle = NSMutableParagraphStyle()
+                    paragraphStyle.textLists = [numberedList]
+                    paragraphStyle.headIndent = 25
+                    paragraphStyle.firstLineHeadIndent = 0
+                    
+                    textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: newRange)
                 }
             }
-            return hasBullets
+            
+            textView.textStorage?.endEditing()
         }
         
-        private func checkForExistingNumberedList(in range: NSRange) -> Bool {
-            guard let textView = textView else { return false }
+        private func getParagraphRanges(in text: String, for range: NSRange) -> [NSRange] {
+            var paragraphRanges: [NSRange] = []
+            let nsString = text as NSString
             
-            var hasNumbers = false
-            textView.textStorage?.enumerateAttribute(.paragraphStyle, in: range, options: []) { value, _, _ in
-                if let paragraphStyle = value as? NSParagraphStyle {
-                    let textLists = paragraphStyle.textLists
-                    if !textLists.isEmpty && textLists.first?.markerFormat == .decimal {
-                        hasNumbers = true
-                    }
-                }
+            nsString.enumerateSubstrings(in: range, options: [.byParagraphs, .substringNotRequired]) { (_, paragraphRange, _, _) in
+                paragraphRanges.append(paragraphRange)
             }
-            return hasNumbers
+            
+            return paragraphRanges
         }
         
-        private func startBulletList(at range: NSRange) {
-            guard let textView = textView else { return }
+        private func cleanLineOfListMarkers(_ line: String) -> String {
+            var cleanedLine = line
             
-            let bulletText = shouldAddNewline(at: range) ? "\n" : ""
-            textView.insertText(bulletText, replacementRange: range)
+            // Remove bullet markers (• character)
+            if cleanedLine.hasPrefix("• ") {
+                cleanedLine = String(cleanedLine.dropFirst(2))
+            }
             
-            // Get the new cursor position
-            let newRange = NSRange(location: range.location + bulletText.count, length: 0)
+            // Remove numbered list markers (1. 2. etc.)
+            let numberPattern = #"^\d+\.\s*"#
+            if let regex = try? NSRegularExpression(pattern: numberPattern) {
+                let range = NSRange(location: 0, length: cleanedLine.count)
+                cleanedLine = regex.stringByReplacingMatches(in: cleanedLine, range: range, withTemplate: "")
+            }
             
-            // Apply bullet list formatting to the current paragraph
+            // Remove dash markers (- )
+            if cleanedLine.hasPrefix("- ") {
+                cleanedLine = String(cleanedLine.dropFirst(2))
+            }
+            
+            // Remove asterisk markers (* )
+            if cleanedLine.hasPrefix("* ") {
+                cleanedLine = String(cleanedLine.dropFirst(2))
+            }
+            
+            return cleanedLine
+        }
+        
+        private func insertProperBulletPointAtCursor(textView: NSTextView, range: NSRange) {
+            let insertionPoint = range.location
+            let text = textView.string
+            
+            // Determine if we need a newline
+            var needsNewline = false
+            if insertionPoint > 0 {
+                let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
+                needsNewline = previousChar != "\n"
+            }
+            
+            textView.textStorage?.beginEditing()
+            
+            // Insert newline if needed
+            if needsNewline {
+                textView.insertText("\n", replacementRange: range)
+                let newRange = NSRange(location: range.location + 1, length: 0)
+                insertBulletListAtRange(textView: textView, range: newRange)
+            } else {
+                insertBulletListAtRange(textView: textView, range: range)
+            }
+            
+            textView.textStorage?.endEditing()
+        }
+        
+        private func insertProperNumberedItemAtCursor(textView: NSTextView, range: NSRange) {
+            let insertionPoint = range.location
+            let text = textView.string
+            
+            // Determine if we need a newline
+            var needsNewline = false
+            if insertionPoint > 0 {
+                let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
+                needsNewline = previousChar != "\n"
+            }
+            
+            textView.textStorage?.beginEditing()
+            
+            // Insert newline if needed
+            if needsNewline {
+                textView.insertText("\n", replacementRange: range)
+                let newRange = NSRange(location: range.location + 1, length: 0)
+                insertNumberedListAtRange(textView: textView, range: newRange)
+            } else {
+                insertNumberedListAtRange(textView: textView, range: range)
+            }
+            
+            textView.textStorage?.endEditing()
+        }
+        
+        private func insertBulletListAtRange(textView: NSTextView, range: NSRange) {
+            // Get current paragraph range
+            let paragraphRange = (textView.string as NSString).paragraphRange(for: range)
+            
+            // Create proper NSTextList
             let bulletList = NSTextList(markerFormat: .disc, options: 0)
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.textLists = [bulletList]
             paragraphStyle.headIndent = 20
             paragraphStyle.firstLineHeadIndent = 0
             
-            // Apply to current paragraph
-            let paragraphRange = (textView.string as NSString).paragraphRange(for: newRange)
+            // Apply list formatting to the paragraph
             textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
             
-            // Set cursor position
-            textView.setSelectedRange(newRange)
+            // Position cursor at end of paragraph if it's empty
+            if paragraphRange.length <= 1 { // Just newline character
+                textView.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
+            }
         }
         
-        private func startNumberedList(at range: NSRange) {
-            guard let textView = textView else { return }
+        private func insertNumberedListAtRange(textView: NSTextView, range: NSRange) {
+            // Get current paragraph range
+            let paragraphRange = (textView.string as NSString).paragraphRange(for: range)
             
-            let numberedText = shouldAddNewline(at: range) ? "\n" : ""
-            textView.insertText(numberedText, replacementRange: range)
-            
-            // Get the new cursor position
-            let newRange = NSRange(location: range.location + numberedText.count, length: 0)
-            
-            // Apply numbered list formatting to the current paragraph
+            // Create proper NSTextList
             let numberedList = NSTextList(markerFormat: .decimal, options: 0)
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.textLists = [numberedList]
-            paragraphStyle.headIndent = 20
+            paragraphStyle.headIndent = 25
             paragraphStyle.firstLineHeadIndent = 0
             
-            // Apply to current paragraph
-            let paragraphRange = (textView.string as NSString).paragraphRange(for: newRange)
+            // Apply list formatting to the paragraph
             textView.textStorage?.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
             
-            // Set cursor position
-            textView.setSelectedRange(newRange)
+            // Position cursor at end of paragraph if it's empty
+            if paragraphRange.length <= 1 { // Just newline character
+                textView.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
+            }
         }
         
         func insertLink() {
