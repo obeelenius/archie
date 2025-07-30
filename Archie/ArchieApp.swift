@@ -174,9 +174,9 @@ extension AppDelegate {
     }
     
     func openSettingsWindow() {
-        lastViewedTab = .general
-        openWindow(selectedTab: .general)
-    }
+            lastViewedTab = .settings
+            openWindow(selectedTab: .settings)
+        }
     
     private func openWindow(selectedTab: SettingsView.MainView) {
         // Update the last viewed tab

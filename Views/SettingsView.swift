@@ -28,9 +28,9 @@ struct SettingsView: View {
     @State private var editingCollection: SnippetCollection? = nil
     
     // Add initializer to accept initial selected view
-    init(initialSelectedView: MainView = .snippets) {
-        self._selectedView = State(initialValue: initialSelectedView)
-    }
+        init(initialSelectedView: MainView = .snippets) {
+            self._selectedView = State(initialValue: initialSelectedView)
+        }
     
     var showingEditor: Bool {
         showingAddSheet || showingAddCollectionSheet || editingSnippet != nil || editingCollection != nil
@@ -87,7 +87,7 @@ extension SettingsView {
     enum MainView: String, CaseIterable, Identifiable {
         case snippets = "Snippets"
         case collections = "Collections"
-        case general = "General"
+        case settings = "Settings"
         
         var id: String { rawValue }
         
@@ -95,7 +95,7 @@ extension SettingsView {
             switch self {
             case .snippets: return "doc.text"
             case .collections: return "folder"
-            case .general: return "gearshape"
+            case .settings: return "gearshape"
             }
         }
     }
@@ -132,24 +132,24 @@ extension SettingsView {
         }
     
     @ViewBuilder
-    private var contentBasedOnSelectedView: some View {
-        switch selectedView {
-        case .snippets:
-            SnippetsContentView(
-                filteredSnippets: filteredSnippets,
-                searchText: $searchText,
-                editingSnippet: $editingSnippet,
-                onCollectionHeaderTapped: {
-                    // Close editor when collection header is tapped
-                    editingSnippet = nil
-                }
-            )
-        case .collections:
-            CollectionsContentView(editingCollection: $editingCollection)
-        case .general:  // Changed from .settings to .general
-            GeneralSettingsContentView()
+        private var contentBasedOnSelectedView: some View {
+            switch selectedView {
+            case .snippets:
+                SnippetsContentView(
+                    filteredSnippets: filteredSnippets,
+                    searchText: $searchText,
+                    editingSnippet: $editingSnippet,
+                    onCollectionHeaderTapped: {
+                        // Close editor when collection header is tapped
+                        editingSnippet = nil
+                    }
+                )
+            case .collections:
+                CollectionsContentView(editingCollection: $editingCollection)
+            case .settings:  // Changed from .general to .settings
+                GeneralSettingsContentView()
+            }
         }
-    }
     
     @ViewBuilder
     private func editorPanel(geometry: GeometryProxy) -> some View {

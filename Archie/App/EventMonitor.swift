@@ -45,6 +45,7 @@ class EventMonitor: ObservableObject {
     private var monitor: Any?
     private var typedBuffer = ""
     private let snippetManager = SnippetManager.shared
+    private let appExclusionManager = AppExclusionManager.shared
     
     func start() {
         // Always try to start the event monitor
@@ -67,6 +68,13 @@ class EventMonitor: ObservableObject {
 // MARK: - Key Event Handling 100080
 extension EventMonitor {
     private func handleKeyEvent(_ event: NSEvent) {
+        // Check if current app is excluded from text expansion
+        if appExclusionManager.isCurrentAppExcluded() {
+            // Reset buffer to prevent partial matches from being processed later
+            typedBuffer = ""
+            return
+        }
+        
         let char = event.charactersIgnoringModifiers ?? ""
         
         // Handle backspace
