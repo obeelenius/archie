@@ -1,3 +1,11 @@
+//
+//  RichTextProcessor.swift
+//  Archie
+//
+//  Created by Amy Elenius on 30/7/2025.
+//
+
+
 // RichTextProcessor.swift
 
 import Foundation
@@ -20,6 +28,8 @@ class RichTextProcessor {
         
         // Process formatting in order of precedence
         processLists(mutableAttributedString)
+        processLinks(mutableAttributedString)
+        processImages(mutableAttributedString)
         processBoldText(mutableAttributedString)
         processItalicText(mutableAttributedString)
         processUnderlineText(mutableAttributedString)
@@ -30,7 +40,7 @@ class RichTextProcessor {
     
     // Convert rich text back to plain text with formatting markers
     func convertToPlainText(_ attributedString: NSAttributedString) -> String {
-        var result = attributedString.string
+        let result = attributedString.string
         
         // This is a simplified conversion - in practice you'd want to
         // preserve the formatting markers when editing
@@ -187,4 +197,79 @@ extension RichTextProcessor {
     - or * - Bullet points
     1. 2. 3. - Numbered lists
     """
+}
+
+// MARK: - Link Processing 100408
+extension RichTextProcessor {
+    private func processLinks(_ attributedString: NSMutableAttributedString) {
+        let pattern = #"\[([^\]]+)\]\(([^)]+)\)"#
+        let text = attributedString.string
+        
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: text.count))
+            
+            // Process matches in reverse order to maintain string indices
+            for match in matches.reversed() {
+                let fullRange = match.range
+                let linkTextRange = match.range(at: 1)
+                let urlRange = match.range(at: 2)
+                
+                if linkTextRange.location != NSNotFound && urlRange.location != NSNotFound {
+                    let linkText = (text as NSString).substring(with: linkTextRange)
+                    let urlString = (text as NSString).substring(with: urlRange)
+                    
+                    // Replace the full match with just the link text
+                    attributedString.replaceCharacters(in: fullRange, with: linkText)
+                    
+                    // Apply link formatting
+                    let newRange = NSRange(location: fullRange.location, length: linkText.count)
+                    if let url = URL(string: urlString) {
+                        attributedString.addAttribute(.link, value: url, range: newRange)
+                    }
+                    attributedString.addAttribute(.foregroundColor, value: NSColor.systemBlue, range: newRange)
+                    attributedString.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: newRange)
+                }
+            }
+        } catch {
+            print("Link processing error: \(error)")
+        }
+    }
+}
+
+// MARK: - Image Processing 100409
+extension RichTextProcessor {
+    private func processImages(_ attributedString: NSMutableAttributedString) {
+        let pattern = #"!\[([^\]]*)\]\(([^)]+)\)"#
+        let text = attributedString.string
+        
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: text.count))
+            
+            // Process matches in reverse order to maintain string indices
+            for match in matches.reversed() {
+                let fullRange = match.range
+                let altTextRange = match.range(at: 1)
+                let urlRange = match.range(at: 2)
+                
+                if urlRange.location != NSNotFound {
+                    let altText = altTextRange.location != NSNotFound ?
+                        (text as NSString).substring(with: altTextRange) : "Image"
+                    let urlString = (text as NSString).substring(with: urlRange)
+                    
+                    // For now, replace with placeholder text that includes URL
+                    let imageText = "🖼️ \(altText) (\(urlString))"
+                    attributedString.replaceCharacters(in: fullRange, with: imageText)
+                    
+                    // Apply image formatting
+                    let newRange = NSRange(location: fullRange.location, length: imageText.count)
+                    attributedString.addAttribute(.backgroundColor, value: NSColor.systemGray.withAlphaComponent(0.1), range: newRange)
+                    attributedString.addAttribute(.foregroundColor, value: NSColor.systemBlue, range: newRange)
+                }
+            }
+        } catch {
+            print("Image processing error: \(error)")
+        }
+    }
 }

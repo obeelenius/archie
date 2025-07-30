@@ -107,6 +107,12 @@ extension Snippet {
         
         return processed
     }
+    
+    // New method to get rich text expansion for display and insertion
+    func processedRichTextExpansion() -> NSAttributedString {
+        let plainExpansion = processedExpansion()
+        return RichTextProcessor.shared.processRichText(plainExpansion)
+    }
 }
 
 // MARK: - Date Components Processing 100006

@@ -1,3 +1,11 @@
+//
+//  RichTextFormattingPanel.swift
+//  Archie
+//
+//  Created by Amy Elenius on 30/7/2025.
+//
+
+
 // RichTextFormattingPanel.swift
 
 import SwiftUI

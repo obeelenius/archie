@@ -10,8 +10,9 @@ struct AddSnippetSlideOut: View {
     
     // Use AppStorage for persistence across app lifecycle
     @AppStorage("draft_shortcut") private var shortcut = ""
-    @AppStorage("draft_expansion") private var expansion = ""
+    @AppStorage("draft_expansion_plain") private var expansionPlain = ""
     @AppStorage("draft_trigger_mode") private var triggerModeRaw = TriggerMode.instant.rawValue
+    @State private var expansionAttributed = NSAttributedString()
     @State private var showingError = false
     @State private var errorMessage = ""
     
@@ -26,6 +27,12 @@ struct AddSnippetSlideOut: View {
             formContent
         }
         .background(Color(NSColor.windowBackgroundColor))
+        .onAppear {
+            // Load saved attributed text if available
+            if !expansionPlain.isEmpty && expansionAttributed.length == 0 {
+                expansionAttributed = NSAttributedString(string: expansionPlain)
+            }
+        }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
         } message: {
@@ -230,18 +237,49 @@ extension AddSnippetSlideOut {
                     .foregroundColor(.secondary)
             }
             
-            // Expansion field
+            // Expansion field with rich text support
             VStack(alignment: .leading, spacing: 12) {
                 Text("Expansion")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                expansionEditor
+                // Rich text editor with formatting toolbar
+                RichTextEditorWithToolbar(
+                    attributedText: Binding(
+                        get: { expansionAttributed },
+                        set: { newValue in
+                            expansionAttributed = newValue
+                            // Also save plain text version for persistence
+                            expansionPlain = newValue.string
+                        }
+                    ),
+                    placeholder: "Replacement text..."
+                )
+                .frame(minHeight: 120)
                 
-                Text("Supports line breaks and variables")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                HStack {
+                    Text("Select text and use toolbar to format. Supports variables and rich text.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Button("Preview") {
+                        // Could show a preview modal
+                    }
+                    .font(.system(size: 10))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.blue.opacity(0.1))
+                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundColor(.blue)
+                    .buttonStyle(.plain)
+                }
                 
+                // Enhanced Variables Section (simplified)
                 enhancedVariablesSection
             }
         }
@@ -251,26 +289,49 @@ extension AddSnippetSlideOut {
                 .fill(Color(NSColor.controlBackgroundColor))
         )
     }
+}
+
+// MARK: - Format Toolbar Button Component 100061
+struct FormatToolbarButton: View {
+    let format: String
+    let icon: String
+    let action: () -> Void
     
-    private var expansionEditor: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.textBackgroundColor))
-                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                .frame(minHeight: 100)
-            
-            TextEditor(text: $expansion)
-                .font(.system(.body, design: .monospaced))
-                .padding(6)
-                .scrollContentBackground(.hidden)
-            
-            if expansion.isEmpty {
-                Text("Replacement text...")
-                    .foregroundColor(.secondary)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(10)
-                    .allowsHitTesting(false)
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+                .frame(width: 24, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isPressed ? Color(NSColor.controlAccentColor).opacity(0.2) : Color.clear)
+                        .stroke(Color(NSColor.separatorColor).opacity(0.3), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
             }
+        }, perform: {})
+        .help(formatHelpText)
+    }
+    
+    private var formatHelpText: String {
+        switch format {
+        case "**": return "Bold text"
+        case "*": return "Italic text"
+        case "__": return "Underlined text"
+        case "~~": return "Strikethrough text"
+        case "- ": return "Bullet point"
+        case "1. ": return "Numbered list"
+        case "[text](url)": return "Link"
+        case "![alt](url)": return "Image"
+        default: return format
         }
     }
 }
@@ -287,12 +348,12 @@ extension AddSnippetSlideOut {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.primary)
                 Spacer()
-                Text("Click to insert • Live examples")
+                Text("Click to insert")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
             
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 dateVariablesGroup
                 timeVariablesGroup
                 relativeVariablesGroup
@@ -306,7 +367,10 @@ extension AddSnippetSlideOut {
                 .stroke(Color.purple.opacity(0.15), lineWidth: 1)
         )
     }
-    
+}
+
+// MARK: - Variable Groups 100063A
+extension AddSnippetSlideOut {
     private var dateVariablesGroup: some View {
         EnhancedVariableGroup(
             title: "📅 Dates",
@@ -366,7 +430,7 @@ extension AddSnippetSlideOut {
     }
 }
 
-// MARK: - Tips Section 100063
+// MARK: - Tips Section 100063B
 extension AddSnippetSlideOut {
     private var tipsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -404,13 +468,25 @@ extension AddSnippetSlideOut {
         }
         
         // Create snippet without assigning to any collection
+        // Store the rich text as RTF data in the expansion field
+        let expansionText = expansionAttributed.length > 0 ? expansionAttributed.string : expansionPlain
+        
         let newSnippet = Snippet(
             shortcut: shortcut.trimmingCharacters(in: .whitespacesAndNewlines),
-            expansion: expansion,
+            expansion: expansionText,
             requiresSpace: (triggerMode == .spaceRequiredConsume || triggerMode == .spaceRequiredKeep),
             keepDelimiter: (triggerMode == .spaceRequiredKeep),
             collectionId: nil // No collection assignment
         )
+        
+        // Store the attributed text separately for rich formatting
+        if expansionAttributed.length > 0 {
+            // We'll need to extend the Snippet model to store rich text data
+            // For now, store the attributed string data in UserDefaults with the snippet ID
+            if let rtfData = expansionAttributed.rtf(from: NSRange(location: 0, length: expansionAttributed.length), documentAttributes: [:]) {
+                UserDefaults.standard.set(rtfData, forKey: "snippet_rtf_\(newSnippet.id.uuidString)")
+            }
+        }
         
         snippetManager.addSnippet(newSnippet)
         
@@ -421,12 +497,13 @@ extension AddSnippetSlideOut {
     
     private func clearDraftData() {
         shortcut = ""
-        expansion = ""
+        expansionPlain = ""
+        expansionAttributed = NSAttributedString()
         triggerModeRaw = TriggerMode.instant.rawValue
         
         // Clear AppStorage
         UserDefaults.standard.removeObject(forKey: "draft_shortcut")
-        UserDefaults.standard.removeObject(forKey: "draft_expansion")
+        UserDefaults.standard.removeObject(forKey: "draft_expansion_plain")
         UserDefaults.standard.removeObject(forKey: "draft_trigger_mode")
     }
 }

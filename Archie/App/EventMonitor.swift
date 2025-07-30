@@ -241,6 +241,18 @@ extension EventMonitor {
     }
     
     private func insertText(_ text: String) {
+        // Check if text contains rich formatting
+        let richText = RichTextProcessor.shared.processRichText(text)
+        let hasFormatting = richText.length > 0 && richText.string != text
+        
+        if hasFormatting {
+            insertRichText(richText)
+        } else {
+            insertPlainText(text)
+        }
+    }
+    
+    private func insertPlainText(_ text: String) {
         // Save current pasteboard contents
         let pasteboard = NSPasteboard.general
         let originalContents = pasteboard.string(forType: .string)
@@ -260,6 +272,39 @@ extension EventMonitor {
             pasteboard.clearContents()
             if let original = originalContents {
                 pasteboard.setString(original, forType: .string)
+            }
+        }
+    }
+    
+    private func insertRichText(_ attributedString: NSAttributedString) {
+        // Save current pasteboard contents
+        let pasteboard = NSPasteboard.general
+        let originalStringContents = pasteboard.string(forType: .string)
+        let originalRTFContents = pasteboard.data(forType: .rtf)
+        
+        // Clear pasteboard and set our rich text
+        pasteboard.clearContents()
+        
+        // Add both RTF and plain text representations
+        if let rtfData = attributedString.rtf(from: NSRange(location: 0, length: attributedString.length), documentAttributes: [:]) {
+            pasteboard.setData(rtfData, forType: .rtf)
+        }
+        pasteboard.setString(attributedString.string, forType: .string)
+        
+        // Small delay to ensure clipboard is ready
+        usleep(10000) // 10ms delay
+        
+        // Simulate Cmd+V
+        simulatePasteCommand()
+        
+        // Restore original pasteboard contents after a longer delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            pasteboard.clearContents()
+            if let originalRTF = originalRTFContents {
+                pasteboard.setData(originalRTF, forType: .rtf)
+            }
+            if let originalString = originalStringContents {
+                pasteboard.setString(originalString, forType: .string)
             }
         }
     }
