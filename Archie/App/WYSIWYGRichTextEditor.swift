@@ -1,11 +1,3 @@
-//
-//  WYSIWYGRichTextEditor.swift
-//  Archie
-//
-//  Created by Amy Elenius on 31/7/2025.
-//
-
-
 // WYSIWYGRichTextEditor.swift
 
 import SwiftUI
@@ -141,7 +133,102 @@ extension WYSIWYGRichTextEditor {
     }
 }
 
-// MARK: - Formatting Methods 100603
+// MARK: - Newline Handling 100603
+extension WYSIWYGRichTextEditor.Coordinator {
+    private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
+        let currentRange = textView.selectedRange()
+        
+        // Safety check for valid range
+        guard currentRange.location != NSNotFound &&
+              currentRange.location <= textView.string.count else {
+            return false
+        }
+        
+        // Get the current line
+        let text = textView.string
+        let lineStart = findLineStart(in: text, from: currentRange.location)
+        let lineEnd = findLineEnd(in: text, from: currentRange.location)
+        
+        guard lineStart <= lineEnd && lineEnd <= text.count else {
+            return false
+        }
+        
+        let currentLine = String(text[text.index(text.startIndex, offsetBy: lineStart)..<text.index(text.startIndex, offsetBy: lineEnd)])
+        let trimmedLine = currentLine.trimmingCharacters(in: .whitespaces)
+        
+        // Check if current line is a bullet list item
+        if trimmedLine.hasPrefix("• ") {
+            let content = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            
+            if content.isEmpty {
+                // Empty bullet item - remove the bullet and exit list
+                let bulletRange = NSRange(location: lineStart, length: lineEnd - lineStart)
+                textView.replaceCharacters(in: bulletRange, with: "")
+                return false // Let system handle the newline
+            } else {
+                // Non-empty bullet item - continue the list
+                textView.insertText("\n• ", replacementRange: currentRange)
+                
+                // Update parent binding
+                parent.attributedText = textView.attributedString()
+                parent.plainText = textView.attributedString().string
+                return true
+            }
+        }
+        
+        // Check if current line is a numbered list item
+        let numberPattern = #"^(\d+)\.\s+"#
+        if let regex = try? NSRegularExpression(pattern: numberPattern),
+           let match = regex.firstMatch(in: trimmedLine, range: NSRange(location: 0, length: trimmedLine.count)) {
+            
+            let numberRange = match.range(at: 1)
+            let numberString = (trimmedLine as NSString).substring(with: numberRange)
+            
+            if let currentNumber = Int(numberString) {
+                let contentAfterNumber = (trimmedLine as NSString).substring(from: match.range.location + match.range.length)
+                let content = contentAfterNumber.trimmingCharacters(in: .whitespaces)
+                
+                if content.isEmpty {
+                    // Empty numbered item - remove the number and exit list
+                    let numberItemRange = NSRange(location: lineStart, length: lineEnd - lineStart)
+                    textView.replaceCharacters(in: numberItemRange, with: "")
+                    return false // Let system handle the newline
+                } else {
+                    // Non-empty numbered item - continue the list with next number
+                    let nextNumber = currentNumber + 1
+                    textView.insertText("\n\(nextNumber). ", replacementRange: currentRange)
+                    
+                    // Update parent binding
+                    parent.attributedText = textView.attributedString()
+                    parent.plainText = textView.attributedString().string
+                    return true
+                }
+            }
+        }
+        
+        return false // Let the system handle the newline normally
+    }
+    
+    private func findLineStart(in text: String, from position: Int) -> Int {
+        guard position > 0 else { return 0 }
+        
+        var index = position - 1
+        while index >= 0 && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
+            index -= 1
+        }
+        return index + 1
+    }
+    
+    private func findLineEnd(in text: String, from position: Int) -> Int {
+        var index = position
+        while index < text.count && text[text.index(text.startIndex, offsetBy: index)] != "\n" {
+            index += 1
+        }
+        return index
+    }
+}
+
+// MARK: - Formatting Methods 100604
 extension WYSIWYGRichTextEditor.Coordinator {
     func applyFormatting(_ formatting: RichTextFormatting) {
         guard let textView = textView else { return }
@@ -277,7 +364,7 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
 }
 
-// MARK: - List Methods 100604
+// MARK: - List Methods 100605
 extension WYSIWYGRichTextEditor.Coordinator {
     func insertBulletList() {
         guard let textView = textView else { return }
@@ -361,11 +448,11 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
     
     private func insertNumberedItemAtCursor(textView: NSTextView, range: NSRange) {
-        let nextNumber = 1 // Simplified - could be enhanced to detect existing numbers
-        var textToInsert = "\(nextNumber). "
-        
         let insertionPoint = range.location
         let text = textView.string
+        
+        let nextNumber = getNextListNumber(in: text, at: insertionPoint)
+        var textToInsert = "\(nextNumber). "
         
         if insertionPoint > 0 && insertionPoint <= text.count {
             let previousChar = text[text.index(text.startIndex, offsetBy: insertionPoint - 1)]
@@ -377,13 +464,47 @@ extension WYSIWYGRichTextEditor.Coordinator {
         textView.insertText(textToInsert, replacementRange: range)
     }
     
+    private func getNextListNumber(in text: String, at position: Int) -> Int {
+        let lines = text.components(separatedBy: .newlines)
+        var maxNumber = 0
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if let match = trimmed.range(of: #"^\d+\."#, options: .regularExpression) {
+                let numberString = String(trimmed[match]).dropLast()
+                if let number = Int(numberString) {
+                    maxNumber = max(maxNumber, number)
+                }
+            }
+        }
+        
+        return maxNumber + 1
+    }
+    
     private func convertSelectionToBulletList(textView: NSTextView, range: NSRange) {
         let selectedText = (textView.string as NSString).substring(with: range)
         let lines = selectedText.components(separatedBy: .newlines)
         
-        let convertedLines = lines.map { line in
+        let isBulletList = lines.allSatisfy { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            return trimmed.isEmpty ? "" : "• \(trimmed)"
+            return trimmed.isEmpty || trimmed.hasPrefix("• ")
+        }
+        
+        var convertedLines: [String] = []
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                if isBulletList {
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append(cleaned)
+                } else {
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append("• \(cleaned)")
+                }
+            } else {
+                convertedLines.append("")
+            }
         }
         
         let convertedText = convertedLines.joined(separator: "\n")
@@ -394,15 +515,30 @@ extension WYSIWYGRichTextEditor.Coordinator {
         let selectedText = (textView.string as NSString).substring(with: range)
         let lines = selectedText.components(separatedBy: .newlines)
         
-        var itemNumber = 1
-        let convertedLines = lines.map { line in
+        let isNumberedList = lines.allSatisfy { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty {
-                return ""
+            if trimmed.isEmpty { return true }
+            
+            let pattern = #"^\d+\.\s+"#
+            return trimmed.range(of: pattern, options: .regularExpression) != nil
+        }
+        
+        var convertedLines: [String] = []
+        var itemNumber = 1
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                if isNumberedList {
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append(cleaned)
+                } else {
+                    let cleaned = cleanLineOfListMarkers(trimmed)
+                    convertedLines.append("\(itemNumber). \(cleaned)")
+                    itemNumber += 1
+                }
             } else {
-                let numbered = "\(itemNumber). \(trimmed)"
-                itemNumber += 1
-                return numbered
+                convertedLines.append("")
             }
         }
         
@@ -410,8 +546,34 @@ extension WYSIWYGRichTextEditor.Coordinator {
         textView.insertText(convertedText, replacementRange: range)
     }
     
-    private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
-        // Simplified newline handling - could be enhanced for auto-continuing lists
-        return false
+    private func cleanLineOfListMarkers(_ line: String) -> String {
+        var cleanedLine = line
+        
+        // Remove bullet markers (• character)
+        if cleanedLine.hasPrefix("• ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        // Remove numbered list markers (1. 2. etc.)
+        let numberPattern = #"^\d+\.\s+"#
+        if let regex = try? NSRegularExpression(pattern: numberPattern) {
+            let range = NSRange(location: 0, length: cleanedLine.count)
+            let matches = regex.matches(in: cleanedLine, range: range)
+            if let match = matches.first {
+                cleanedLine = (cleanedLine as NSString).replacingCharacters(in: match.range, with: "")
+            }
+        }
+        
+        // Remove dash markers (- )
+        if cleanedLine.hasPrefix("- ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        // Remove asterisk markers (* )
+        if cleanedLine.hasPrefix("* ") {
+            cleanedLine = String(cleanedLine.dropFirst(2))
+        }
+        
+        return cleanedLine
     }
 }

@@ -206,16 +206,57 @@ extension EventMonitor {
             deleteTypedShortcutAndDelimiter(shortcut: shortcut, delimiter: delimiter)
         }
         
-        // Insert the expansion
+        // Get the snippet to check for rich text
+        let snippet = getSnippetForShortcut(shortcut)
+        
+        // Check if there's saved rich text data for this snippet
         var finalText = expansion
-        if keepDelimiter && !delimiter.isEmpty {
-            finalText += delimiter
+        var hasRichText = false
+        
+        if let snippet = snippet,
+           let rtfData = UserDefaults.standard.data(forKey: "snippet_rtf_\(snippet.id.uuidString)"),
+           let attributedText = NSAttributedString(rtf: rtfData, documentAttributes: nil) {
+            // Use rich text insertion
+            insertRichText(attributedText, keepDelimiter: keepDelimiter, delimiter: delimiter)
+            hasRichText = true
+            print("DEBUG EXPANSION: Using rich text for snippet \(snippet.shortcut)")
         }
         
-        insertText(finalText)
+        if !hasRichText {
+            // Fallback to plain text
+            if keepDelimiter && !delimiter.isEmpty {
+                finalText += delimiter
+            }
+            insertPlainText(finalText)
+            print("DEBUG EXPANSION: Using plain text for shortcut \(shortcut)")
+        }
         
         // Play sound feedback if enabled
         SoundManager.shared.playExpansionSound()
+    }
+    
+    private func getSnippetForShortcut(_ shortcut: String) -> Snippet? {
+        // Check all enabled collections and their snippets
+        for collection in snippetManager.collections.filter({ $0.isEnabled }) {
+            let collectionSnippets = snippetManager.snippets(for: collection).filter { $0.isEnabled }
+            
+            for snippet in collectionSnippets {
+                let fullShortcut = snippet.fullShortcut(with: collection)
+                if fullShortcut == shortcut {
+                    return snippet
+                }
+            }
+        }
+        
+        // Also check uncollected snippets
+        let uncollectedSnippets = snippetManager.snippets.filter { $0.collectionId == nil && $0.isEnabled }
+        for snippet in uncollectedSnippets {
+            if snippet.shortcut == shortcut {
+                return snippet
+            }
+        }
+        
+        return nil
     }
     
     private func deleteTypedShortcutAndDelimiter(shortcut: String, delimiter: String) {
@@ -276,7 +317,21 @@ extension EventMonitor {
         }
     }
     
-    private func insertRichText(_ attributedString: NSAttributedString) {
+    private func insertRichText(_ attributedString: NSAttributedString, keepDelimiter: Bool = false, delimiter: String = "") {
+        // Add delimiter if needed
+        let finalAttributedString: NSAttributedString
+        if keepDelimiter && !delimiter.isEmpty {
+            let mutableString = NSMutableAttributedString(attributedString: attributedString)
+            let delimiterAttributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                .foregroundColor: NSColor.labelColor
+            ]
+            mutableString.append(NSAttributedString(string: delimiter, attributes: delimiterAttributes))
+            finalAttributedString = mutableString
+        } else {
+            finalAttributedString = attributedString
+        }
+        
         // Save current pasteboard contents
         let pasteboard = NSPasteboard.general
         let originalStringContents = pasteboard.string(forType: .string)
@@ -286,13 +341,16 @@ extension EventMonitor {
         pasteboard.clearContents()
         
         // Add both RTF and plain text representations
-        if let rtfData = attributedString.rtf(from: NSRange(location: 0, length: attributedString.length), documentAttributes: [:]) {
+        if let rtfData = finalAttributedString.rtf(from: NSRange(location: 0, length: finalAttributedString.length), documentAttributes: [:]) {
             pasteboard.setData(rtfData, forType: .rtf)
+            print("DEBUG RICH TEXT: Set RTF data on pasteboard")
+        } else {
+            print("DEBUG RICH TEXT: Failed to create RTF data")
         }
-        pasteboard.setString(attributedString.string, forType: .string)
+        pasteboard.setString(finalAttributedString.string, forType: .string)
         
         // Small delay to ensure clipboard is ready
-        usleep(10000) // 10ms delay
+        usleep(15000) // 15ms delay for rich text
         
         // Simulate Cmd+V
         simulatePasteCommand()
@@ -307,6 +365,11 @@ extension EventMonitor {
                 pasteboard.setString(originalString, forType: .string)
             }
         }
+    }
+    
+    // Overloaded version without delimiter parameters for backward compatibility
+    private func insertRichText(_ attributedString: NSAttributedString) {
+        insertRichText(attributedString, keepDelimiter: false, delimiter: "")
     }
     
     private func simulatePasteCommand() {

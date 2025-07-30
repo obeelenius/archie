@@ -534,9 +534,20 @@ extension EditSnippetSlideOut {
         shortcut = currentSnippet.shortcut
         expansion = currentSnippet.expansion
         
-        // Load rich text representation if available
-        if !expansion.isEmpty {
+        // Try to load saved rich text data first
+        if let rtfData = UserDefaults.standard.data(forKey: "snippet_rtf_\(snippet.id.uuidString)"),
+           let loadedAttributedText = NSAttributedString(rtf: rtfData, documentAttributes: nil) {
+            // Use the saved rich text
+            expansionAttributed = loadedAttributedText
+            print("DEBUG: Loaded rich text from UserDefaults for snippet \(snippet.id)")
+        } else if !expansion.isEmpty {
+            // Fallback: process the plain text through RichTextProcessor
             expansionAttributed = RichTextProcessor.shared.processRichText(expansion)
+            print("DEBUG: Processed plain text through RichTextProcessor for snippet \(snippet.id)")
+        } else {
+            // Empty expansion
+            expansionAttributed = NSAttributedString()
+            print("DEBUG: Empty expansion for snippet \(snippet.id)")
         }
         
         // Determine trigger mode based on both requiresSpace and keepDelimiter
@@ -564,7 +575,8 @@ extension EditSnippetSlideOut {
         if let index = snippetManager.snippets.firstIndex(where: { $0.id == snippet.id }) {
             snippetManager.snippets[index].shortcut = finalShortcut
             
-            // Use the rich text content from the editor
+            // Use the rich text content from the editor - store as plain text in the snippet
+            // but keep the rich text data separately for editing
             let expansionText = expansionAttributed.length > 0 ? expansionAttributed.string : expansion
             snippetManager.snippets[index].expansion = expansionText
             
@@ -572,11 +584,18 @@ extension EditSnippetSlideOut {
             snippetManager.snippets[index].keepDelimiter = newKeepDelimiter
             // Don't modify collectionId - keep existing assignment
             
-            // Store the attributed text separately for rich formatting if needed
+            // Always store the attributed text for rich formatting
             if expansionAttributed.length > 0 {
                 if let rtfData = expansionAttributed.rtf(from: NSRange(location: 0, length: expansionAttributed.length), documentAttributes: [:]) {
                     UserDefaults.standard.set(rtfData, forKey: "snippet_rtf_\(snippet.id.uuidString)")
+                    print("DEBUG: Saved rich text data for snippet \(snippet.id)")
+                } else {
+                    print("DEBUG: Failed to create RTF data for snippet \(snippet.id)")
                 }
+            } else {
+                // Remove any existing rich text data if expansion is now empty
+                UserDefaults.standard.removeObject(forKey: "snippet_rtf_\(snippet.id.uuidString)")
+                print("DEBUG: Removed rich text data for empty snippet \(snippet.id)")
             }
             
             // Explicitly save to ensure persistence
@@ -589,6 +608,7 @@ extension EditSnippetSlideOut {
         isShowing = false
     }
 }
+
 // MARK: - Live Example Functions 100036
 extension EditSnippetSlideOut {
     private func getCurrentDateExample() -> String {
