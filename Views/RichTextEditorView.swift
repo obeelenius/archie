@@ -172,14 +172,6 @@ struct RichTextEditorView: NSViewRepresentable {
     }
 }
 
-// MARK: - Rich Text Formatting Types 100411
-enum RichTextFormatting {
-    case bold
-    case italic
-    case underline
-    case strikethrough
-}
-
 // MARK: - Rich Text Editor with Toolbar 100412
 struct RichTextEditorWithToolbar: View {
     @Binding var attributedText: NSAttributedString

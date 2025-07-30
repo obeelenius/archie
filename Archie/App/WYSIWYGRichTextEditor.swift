@@ -13,8 +13,9 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let containerView = NSView()
         
-        // Create text view without scroll view wrapper
-        let textView = NSTextView()
+        // Create custom text view that handles image pasting
+        let textView = ImageHandlingTextView()
+        textView.coordinator = context.coordinator
         configureTextView(textView, context: context)
         textView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(textView)
@@ -52,7 +53,80 @@ struct WYSIWYGRichTextEditor: NSViewRepresentable {
     }
 }
 
-// MARK: - Text View Configuration 100601
+// MARK: - Rich Text Formatting Types 100601
+enum RichTextFormatting {
+    case bold
+    case italic
+    case underline
+    case strikethrough
+}
+
+// MARK: - Custom Text View for Image Handling 100608
+class ImageHandlingTextView: NSTextView {
+    weak var coordinator: WYSIWYGRichTextEditor.Coordinator?
+    
+    override func paste(_ sender: Any?) {
+        print("DEBUG: paste() called")
+        let pasteboard = NSPasteboard.general
+        
+        // Debug: Print all available types
+        print("DEBUG: Available pasteboard types: \(pasteboard.types ?? [])")
+        
+        // Check if pasteboard contains an image
+        let hasImage = pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue])
+        print("DEBUG: Has image data: \(hasImage)")
+        
+        if hasImage {
+            print("DEBUG: Handling image paste")
+            coordinator?.handleImagePaste(textView: self, affectedRanges: [NSValue(range: self.selectedRange())])
+        } else {
+            print("DEBUG: Handling text paste")
+            // Let the text view handle normal text paste
+            super.paste(sender)
+        }
+    }
+    
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        print("DEBUG: performDragOperation called")
+        let pasteboard = sender.draggingPasteboard
+        print("DEBUG: Drag pasteboard types: \(pasteboard.types ?? [])")
+        
+        // Check for file URLs first (most common when dragging from Finder)
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
+            for url in urls {
+                print("DEBUG: Processing dragged file: \(url.path)")
+                
+                // Check if it's an image file
+                let imageExtensions = ["png", "jpg", "jpeg", "gif", "tiff", "bmp", "heic", "webp"]
+                let fileExtension = url.pathExtension.lowercased()
+                
+                if imageExtensions.contains(fileExtension) {
+                    print("DEBUG: Found image file: \(url.path)")
+                    
+                    // Load image data and process it
+                    if let imageData = try? Data(contentsOf: url) {
+                        if let savedImagePath = coordinator?.saveImageToAppDirectory(data: imageData, type: fileExtension.isEmpty ? "png" : fileExtension) {
+                            print("DEBUG: Image saved, inserting reference")
+                            coordinator?.insertImageReference(at: NSRange(location: self.selectedRange().location, length: 0), imagePath: savedImagePath, textView: self)
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check if dragged item contains image data directly
+        if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue]) {
+            print("DEBUG: Handling image data drag")
+            coordinator?.handleImagePaste(textView: self, affectedRanges: [NSValue(range: self.selectedRange())])
+            return true
+        }
+        
+        return super.performDragOperation(sender)
+    }
+}
+
+// MARK: - Text View Configuration 100602
 extension WYSIWYGRichTextEditor {
     private func configureTextView(_ textView: NSTextView, context: Context) {
         // Configure for rich text editing
@@ -103,7 +177,7 @@ extension WYSIWYGRichTextEditor {
     }
 }
 
-// MARK: - Coordinator Class 100602
+// MARK: - Coordinator Class 100603
 extension WYSIWYGRichTextEditor {
     class Coordinator: NSObject, NSTextViewDelegate {
         let parent: WYSIWYGRichTextEditor
@@ -166,49 +240,58 @@ extension WYSIWYGRichTextEditor {
         }
         
         // MARK: - Image Pasting Support
-        private func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementString: String?) -> Bool {
-            // Check if pasteboard contains an image
-            let pasteboard = NSPasteboard.general
-            
-            if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue]) {
-                // Handle image paste
-                handleImagePaste(textView: textView, affectedRanges: affectedRanges)
-                return false // We handled the paste
-            }
-            
-            return true // Let the system handle normal text paste
+        func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
+            // This method is called for multiple range replacements
+            return true // Let the system handle normal text operations
         }
         
-        private func handleImagePaste(textView: NSTextView, affectedRanges: [NSValue]) {
+        func handleImagePaste(textView: NSTextView, affectedRanges: [NSValue]) {
+            print("DEBUG: handleImagePaste called")
             let pasteboard = NSPasteboard.general
             
             // Try to get image data from pasteboard
             var imageData: Data?
             var imageType = "png"
             
+            print("DEBUG: Checking for TIFF data")
             if let tiffData = pasteboard.data(forType: .tiff) {
+                print("DEBUG: Found TIFF data, converting to PNG")
                 // Convert TIFF to PNG for better compatibility
                 if let image = NSImage(data: tiffData),
                    let pngData = image.pngData() {
                     imageData = pngData
                     imageType = "png"
+                    print("DEBUG: Successfully converted TIFF to PNG")
+                } else {
+                    print("DEBUG: Failed to convert TIFF to PNG")
                 }
             } else if let pngData = pasteboard.data(forType: .png) {
+                print("DEBUG: Found PNG data directly")
                 imageData = pngData
                 imageType = "png"
+            } else {
+                print("DEBUG: No image data found")
             }
             
-            guard let data = imageData else { return }
+            guard let data = imageData else {
+                print("DEBUG: No image data to process")
+                return
+            }
+            
+            print("DEBUG: Image data size: \(data.count) bytes")
             
             // Save image to temporary location or app support directory
             if let savedImagePath = saveImageToAppDirectory(data: data, type: imageType) {
+                print("DEBUG: Image saved to: \(savedImagePath)")
                 // Insert image reference at paste location
                 let insertionRange = affectedRanges.first?.rangeValue ?? NSRange(location: textView.selectedRange().location, length: 0)
                 insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView)
+            } else {
+                print("DEBUG: Failed to save image")
             }
         }
         
-        private func saveImageToAppDirectory(data: Data, type: String) -> String? {
+        func saveImageToAppDirectory(data: Data, type: String) -> String? {
             // Create images directory in app support
             guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
                 return nil
@@ -233,7 +316,7 @@ extension WYSIWYGRichTextEditor {
             }
         }
         
-        private func insertImageReference(at range: NSRange, imagePath: String, textView: NSTextView) {
+        func insertImageReference(at range: NSRange, imagePath: String, textView: NSTextView) {
             // Create image attachment
             let attachment = NSTextAttachment()
             
@@ -263,9 +346,8 @@ extension WYSIWYGRichTextEditor {
                 attachment.image = resizedImage
             }
             
-            // Store file path in attachment for later reference
-            attachment.fileWrapper = FileWrapper(regularFileWithContents: Data())
-            attachment.fileWrapper?.filename = imagePath
+            // Fix: Don't create file wrapper - just use the image directly
+            // The error was caused by creating a file wrapper without a filename
             
             // Create attributed string with attachment
             let attachmentString = NSAttributedString(attachment: attachment)
@@ -390,234 +472,8 @@ extension WYSIWYGRichTextEditor {
         }
     }
 }
-        
-        // MARK: - Image Pasting Support
-        private func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementString: String?) -> Bool {
-            // Check if pasteboard contains an image
-            let pasteboard = NSPasteboard.general
-            
-            if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.tiff.rawValue, NSPasteboard.PasteboardType.png.rawValue]) {
-                // Handle image paste
-                handleImagePaste(textView: textView, affectedRanges: affectedRanges)
-                return false // We handled the paste
-            }
-            
-            return true // Let the system handle normal text paste
-        }
-        
-        private func handleImagePaste(textView: NSTextView, affectedRanges: [NSValue]) {
-            let pasteboard = NSPasteboard.general
-            
-            // Try to get image data from pasteboard
-            var imageData: Data?
-            var imageType = "png"
-            
-            if let tiffData = pasteboard.data(forType: .tiff) {
-                // Convert TIFF to PNG for better compatibility
-                if let image = NSImage(data: tiffData),
-                   let pngData = image.pngData() {
-                    imageData = pngData
-                    imageType = "png"
-                }
-            } else if let pngData = pasteboard.data(forType: .png) {
-                imageData = pngData
-                imageType = "png"
-            }
-            
-            guard let data = imageData else { return }
-            
-            // Save image to temporary location or app support directory
-            if let savedImagePath = saveImageToAppDirectory(data: data, type: imageType) {
-                // Insert image reference at paste location
-                let insertionRange = affectedRanges.first?.rangeValue ?? NSRange(location: textView.selectedRange().location, length: 0)
-                insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView)
-            }
-        }
-        
-        private func saveImageToAppDirectory(data: Data, type: String) -> String? {
-            // Create images directory in app support
-            guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-                return nil
-            }
-            
-            let archieDir = appSupportDir.appendingPathComponent("Archie")
-            let imagesDir = archieDir.appendingPathComponent("Images")
-            
-            // Create directories if they don't exist
-            try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
-            
-            // Generate unique filename
-            let filename = "image_\(UUID().uuidString).\(type)"
-            let imageURL = imagesDir.appendingPathComponent(filename)
-            
-            do {
-                try data.write(to: imageURL)
-                return imageURL.path
-            } catch {
-                print("Failed to save image: \(error)")
-                return nil
-            }
-        }
-        
-        private func insertImageReference(at range: NSRange, imagePath: String, textView: NSTextView) {
-            // Create image attachment
-            let attachment = NSTextAttachment()
-            
-            // Load and resize image for display
-            if let image = NSImage(contentsOfFile: imagePath) {
-                // Resize image to reasonable size for text editor
-                let maxWidth: CGFloat = 300
-                let maxHeight: CGFloat = 200
-                
-                let imageSize = image.size
-                var newSize = imageSize
-                
-                if imageSize.width > maxWidth || imageSize.height > maxHeight {
-                    let widthRatio = maxWidth / imageSize.width
-                    let heightRatio = maxHeight / imageSize.height
-                    let ratio = min(widthRatio, heightRatio)
-                    
-                    newSize = CGSize(width: imageSize.width * ratio, height: imageSize.height * ratio)
-                }
-                
-                // Create resized image
-                let resizedImage = NSImage(size: newSize)
-                resizedImage.lockFocus()
-                image.draw(in: NSRect(origin: .zero, size: newSize))
-                resizedImage.unlockFocus()
-                
-                attachment.image = resizedImage
-            }
-            
-            // Store file path in attachment for later reference
-            attachment.fileWrapper = FileWrapper(regularFileWithContents: Data())
-            attachment.fileWrapper?.filename = imagePath
-            
-            // Create attributed string with attachment
-            let attachmentString = NSAttributedString(attachment: attachment)
-            
-            // Insert the image
-            textView.textStorage?.replaceCharacters(in: range, with: attachmentString)
-            
-            // Update parent binding
-            parent.attributedText = textView.attributedString()
-            parent.plainText = textView.attributedString().string
-        }
-        
-        private func isValidURL(_ string: String) -> Bool {
-            // Check if string is a valid URL
-            if let url = URL(string: string) {
-                return url.scheme != nil && (url.scheme == "http" || url.scheme == "https" || url.scheme == "mailto" || url.scheme == "ftp")
-            }
-            
-            // Check if it's a URL without scheme
-            if string.contains(".") && (string.hasPrefix("www.") || string.contains("@")) {
-                return true
-            }
-            
-            return false
-        }
-        
-        private func createHyperlink(text: String, url: String, range: NSRange) {
-            guard let textView = textView else { return }
-            
-            // Ensure URL has a scheme
-            var finalURL = url
-            if !url.hasPrefix("http://") && !url.hasPrefix("https://") && !url.hasPrefix("mailto:") {
-                if url.contains("@") {
-                    finalURL = "mailto:\(url)"
-                } else {
-                    finalURL = "https://\(url)"
-                }
-            }
-            
-            // Create attributed string with link
-            let linkAttributes: [NSAttributedString.Key: Any] = [
-                .link: finalURL,
-                .foregroundColor: NSColor.systemBlue,
-                .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize)
-            ]
-            
-            let linkAttributedString = NSAttributedString(string: text, attributes: linkAttributes)
-            
-            // Replace the text with the hyperlink
-            textView.textStorage?.replaceCharacters(in: range, with: linkAttributedString)
-        }
-        
-        private func showHyperlinkDialog() {
-            guard let textView = textView else { return }
-            
-            let selectedRange = textView.selectedRange()
-            guard selectedRange.length > 0 else {
-                // No text selected, show alert
-                showNoTextSelectedAlert()
-                return
-            }
-            
-            let selectedText = (textView.string as NSString).substring(with: selectedRange)
-            
-            // Show URL input dialog
-            showURLInputDialog(for: selectedText, range: selectedRange)
-        }
-        
-        private func showNoTextSelectedAlert() {
-            let alert = NSAlert()
-            alert.messageText = "No Text Selected"
-            alert.informativeText = "Please select the text you want to turn into a hyperlink first."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-        }
-        
-        private func showURLInputDialog(for text: String, range: NSRange) {
-            let alert = NSAlert()
-            alert.messageText = "Add Hyperlink"
-            alert.informativeText = "Enter the URL for '\(text)'"
-            alert.alertStyle = .informational
-            
-            // Create input field
-            let inputField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-            inputField.placeholderString = "https://example.com"
-            alert.accessoryView = inputField
-            
-            alert.addButton(withTitle: "Add Link")
-            alert.addButton(withTitle: "Cancel")
-            
-            // Focus the input field
-            alert.window.initialFirstResponder = inputField
-            
-            let response = alert.runModal()
-            
-            if response == .alertFirstButtonReturn {
-                let urlString = inputField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                if !urlString.isEmpty {
-                    if isValidURL(urlString) || urlString.contains(".") {
-                        createHyperlink(text: text, url: urlString, range: range)
-                        
-                        // Update parent binding
-                        parent.attributedText = textView.attributedString() ?? NSAttributedString()
-                        parent.plainText = textView.attributedString().string ?? ""
-                    } else {
-                        showInvalidURLAlert()
-                    }
-                }
-            }
-        }
-        
-        private func showInvalidURLAlert() {
-            let alert = NSAlert()
-            alert.messageText = "Invalid URL"
-            alert.informativeText = "Please enter a valid URL (e.g., https://example.com)"
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-        }
 
-
-
-// MARK: - Newline Handling 100603
+// MARK: - Newline Handling 100604
 extension WYSIWYGRichTextEditor.Coordinator {
     private func handleNewlineInsertion(_ textView: NSTextView) -> Bool {
         let currentRange = textView.selectedRange()
@@ -712,7 +568,7 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
 }
 
-// MARK: - Formatting Methods 100604
+// MARK: - Formatting Methods 100605
 extension WYSIWYGRichTextEditor.Coordinator {
     func applyFormatting(_ formatting: RichTextFormatting) {
         guard let textView = textView else { return }
@@ -848,7 +704,7 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
 }
 
-// MARK: - List Methods 100605
+// MARK: - List Methods 100606
 extension WYSIWYGRichTextEditor.Coordinator {
     func insertBulletList() {
         guard let textView = textView else { return }
@@ -912,6 +768,7 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
     
     private func showImageFilePicker(insertionRange: NSRange) {
+        print("DEBUG: showImageFilePicker called")
         let openPanel = NSOpenPanel()
         openPanel.title = "Select Image"
         openPanel.message = "Choose an image to insert into your snippet"
@@ -920,15 +777,29 @@ extension WYSIWYGRichTextEditor.Coordinator {
         openPanel.allowsMultipleSelection = false
         openPanel.allowedContentTypes = [.image, .png, .jpeg, .gif, .tiff, .bmp, .heic, .webP]
         
-        if openPanel.runModal() == .OK {
-            guard let selectedURL = openPanel.url else { return }
+        let response = openPanel.runModal()
+        print("DEBUG: File picker response: \(response.rawValue)")
+        
+        if response == .OK {
+            guard let selectedURL = openPanel.url else {
+                print("DEBUG: No URL selected")
+                return
+            }
+            
+            print("DEBUG: Selected file: \(selectedURL.path)")
             
             // Copy image to app directory and insert reference
             if let imageData = try? Data(contentsOf: selectedURL) {
+                print("DEBUG: Loaded image data: \(imageData.count) bytes")
                 let fileExtension = selectedURL.pathExtension.lowercased()
                 if let savedImagePath = saveImageToAppDirectory(data: imageData, type: fileExtension.isEmpty ? "png" : fileExtension) {
+                    print("DEBUG: Image saved to: \(savedImagePath)")
                     insertImageReference(at: insertionRange, imagePath: savedImagePath, textView: textView!)
+                } else {
+                    print("DEBUG: Failed to save image")
                 }
+            } else {
+                print("DEBUG: Failed to load image data from URL")
             }
         }
     }
@@ -1081,7 +952,7 @@ extension WYSIWYGRichTextEditor.Coordinator {
     }
 }
 
-// MARK: - NSImage Extension for PNG Data 100606
+// MARK: - NSImage Extension for PNG Data 100607
 extension NSImage {
     func pngData() -> Data? {
         guard let tiffData = self.tiffRepresentation,
